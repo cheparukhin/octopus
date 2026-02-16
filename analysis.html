@@ -285,7 +285,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
 <!-- ===== 6. THE OPTIMAL TIMER ===== -->
 <section>
   <h2>The Optimal Timer</h2>
-  <p class="section-lead">The heater costs &pound;884/year &mdash; most of it standby waste. Can we do better than just reverting to Cozy?</p>
+  <p class="section-lead">The heater costs &pound;835/year &mdash; most of it standby waste. Can we do better than just reverting to Cozy?</p>
   <div class="card">
     <h3>How to Find the Best Schedule</h3>
     <p class="desc">The optimisation has two levers. Pulling both at once gives the biggest saving.</p>
@@ -332,7 +332,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
     </div>
   </div>
   <div class="conclusion">
-    <strong>Recommendation:</strong> <strong>Option A (11:00&ndash;16:00)</strong> is the simplest and cheapest &mdash; a single 5-hour window during the Agile midday dip saves roughly <strong id="optSavingA">&pound;289</strong>/year vs the current timer. If hotter water at shower time matters, <strong>Option B</strong> adds a 19:30&ndash;21:00 boost for &pound;<span id="optSavingBDiff">47</span>&nbsp;less saving. Both are dramatically better than 20&nbsp;h/day.
+    <strong>Recommendation:</strong> The <strong>Optimal</strong> 2-window schedule (13&ndash;16, 22&ndash;00) saves roughly <strong id="optSavingOpt">&pound;214</strong>/year vs the current timer &mdash; found via exhaustive search over all 1/2/3-window schedules at 30-min resolution, penalising heat loss between heating and evening usage. It keeps hot water available for midnight showers while targeting the cheapest Agile slots outside peak hours. Even reverting to <strong>Cozy</strong> saves <strong id="optSavingCozy">&pound;139</strong>/year. Any short schedule is dramatically better than 20&nbsp;h/day.
   </div>
 </section>
 
@@ -707,24 +707,28 @@ const optimalWindowPlugin = {
   id: 'optimalWindow',
   beforeDraw(chart) {
     const {ctx, chartArea: {left, right, top, bottom}, scales: {x}} = chart;
-    const x1 = x.getPixelForValue(22);
-    const x2 = x.getPixelForValue(32);
+    const windows = [[26, 32], [44, 48]];
     ctx.save();
-    ctx.fillStyle = 'rgba(46,213,115,0.08)';
-    ctx.fillRect(x1, top, x2 - x1, bottom - top);
+    windows.forEach(([a, b]) => {
+      const x1 = x.getPixelForValue(a);
+      const x2 = x.getPixelForValue(Math.min(b, 47));
+      ctx.fillStyle = 'rgba(46,213,115,0.08)';
+      ctx.fillRect(x1, top, x2 - x1, bottom - top);
+      [x1, x2].forEach(xp => {
+        ctx.strokeStyle = 'rgba(46,213,115,0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(xp, top);
+        ctx.lineTo(xp, bottom);
+        ctx.stroke();
+      });
+    });
     ctx.fillStyle = 'rgba(46,213,115,0.55)';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Cheapest 5h window', (x1 + x2) / 2, top + 15);
-    [x1, x2].forEach(xp => {
-      ctx.strokeStyle = 'rgba(46,213,115,0.35)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(xp, top);
-      ctx.lineTo(xp, bottom);
-      ctx.stroke();
-    });
+    const midX = x.getPixelForValue(35);
+    ctx.fillText('Optimal 2-window (5 h)', midX, top + 15);
     ctx.restore();
   }
 };
@@ -802,10 +806,10 @@ optSchedules.forEach(sched => {
 });
 
 // Update dynamic conclusion values
-const savingA = optSchedules[1]?.saving || 289;
-const savingB = optSchedules[2]?.saving || 242;
-document.getElementById('optSavingA').textContent = '\u00a3' + savingA;
-document.getElementById('optSavingBDiff').textContent = Math.round(savingA - savingB);
+const savingOpt = optSchedules[2]?.saving || 228;
+const savingCozy = optSchedules[1]?.saving || 169;
+document.getElementById('optSavingOpt').textContent = '\u00a3' + savingOpt;
+document.getElementById('optSavingCozy').textContent = '\u00a3' + savingCozy;
 
 }).catch(() => {
   document.querySelector('.container').insertAdjacentHTML('afterbegin',
