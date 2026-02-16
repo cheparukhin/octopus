@@ -78,7 +78,7 @@ Optimal schedules minimize both enabled hours (reducing standby waste) and £/kW
 
 - `download.py` — fetches consumption + Agile rates from Octopus API, writes `usage.csv`
 - `usage.csv` — raw half-hourly data (UTC timestamps)
-- `analysis.html` — narrative dashboard (Chart.js, dark theme, 8 sections with 7 charts)
+- `analysis.html` — narrative dashboard (Chart.js, dark theme, 7 sections with 8 charts)
 - `report_data.json` — chart data loaded via `fetch()` at runtime
 - `og-analysis.png` — Open Graph preview image for Telegram/social sharing
 - `.tmp/` — intermediate analysis scripts and data (gitignored)

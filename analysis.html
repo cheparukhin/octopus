@@ -119,7 +119,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   <div class="stats">
     <div class="stat"><div class="num">+87%</div><div class="label">of the increase is the timer</div></div>
     <div class="stat"><div class="num">6.2 h</div><div class="label">element run-time per day (was&nbsp;3.4)</div></div>
-    <div class="stat"><div class="num">~&pound;275</div><div class="label">extra annual cost</div></div>
+    <div class="stat"><div class="num">~&pound;289</div><div class="label">saveable per year</div></div>
     <div class="stat"><div class="num">19.3</div><div class="label">heater kWh/day (was&nbsp;10.4)</div></div>
   </div>
 </div>
@@ -136,10 +136,10 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 3. TWO TIMER REGIMES ===== -->
+<!-- ===== 3. THE TIMER REGIMES ===== -->
 <section>
-  <h2>Two Timer Regimes</h2>
-  <p class="section-lead">In April 2025 the heater switched to the &ldquo;Cozy&rdquo; 3-window timer. In late August it changed again to a near-continuous schedule. The March period used an uncertain timer configuration and is excluded from the comparison.</p>
+  <h2>The Timer Regimes</h2>
+  <p class="section-lead">In April 2025 the heater switched to the &ldquo;Cozy&rdquo; 3-window timer &mdash; enabled ~8&nbsp;h/day across three dip windows. In late August it changed to a near-continuous schedule: on ~20&nbsp;h/day, off only 16:00&ndash;20:00. These two regimes are the core comparison.</p>
   <div class="card">
     <h3>Timer Schedules</h3>
     <p class="desc">Coloured = element enabled. Dark = element disabled by timer.</p>
@@ -190,37 +190,34 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 4. WHY MORE TIMER HOURS = MORE ENERGY ===== -->
+<!-- ===== 4. THE PHYSICS: STANDBY HEAT LOSS ===== -->
 <section>
-  <h2>Why More Timer Hours = More Energy</h2>
-  <p class="section-lead">The distribution of half-hourly readings tells the story: under Cozy, most slots are idle. Under Current, almost nothing is.</p>
+  <h2>The Physics: Standby Heat Loss</h2>
+  <p class="section-lead">Why does 20&nbsp;h of enabled time use nearly double the energy of 8&nbsp;h? The answer is standby heat loss &mdash; and we can measure it.</p>
   <div class="card">
     <h3>Distribution of Half-Hourly Readings</h3>
     <p class="desc">Smoothed density of readings (0.1 kWh bins). One representative month per regime.</p>
     <div class="chart-container chart-tall"><canvas id="chartDist"></canvas></div>
     <div class="insight-box">
-      <strong>The physics:</strong> longer timer keeps the tank hot &rarr; higher average temperature &rarr; higher standing heat loss &rarr; element runs more to compensate. Cozy limits enabled time to 8&nbsp;h/day, letting the tank cool freely between windows. The Current regime&rsquo;s 20&nbsp;h/day eliminates this free temperature setback &mdash; every dip is immediately corrected.
+      <strong>The pattern:</strong> under Cozy, most half-hour slots read zero &mdash; the thermostat is satisfied and the element stays off. Under Current, almost no slot is idle: the element fires in nearly every one. But it&rsquo;s not heating more water &mdash; so where is all that extra energy going?
     </div>
   </div>
-</section>
-
-<!-- ===== 5. WHERE THE ENERGY GOES ===== -->
-<section>
-  <h2>Where the Energy Goes</h2>
-  <p class="section-lead">The Current regime keeps the heater on 20&nbsp;h/day. Where does all that energy go? The overnight profile reveals a clear answer: standby heat loss.</p>
   <div class="card">
     <h3>Heater Energy by Time of Day (Current Winter)</h3>
     <p class="desc">Average heater excess per half-hour slot, Dec 2025 &ndash; Feb 2026. Dashed line = standby floor. Red bars = measurement window.</p>
     <div class="chart-container chart-med"><canvas id="chartStandby"></canvas></div>
+    <div class="insight-box">
+      <strong>Standby heat loss.</strong> After the evening shower peak, energy decays exponentially overnight as the tank cools &mdash; bottoming at <strong id="standbyDirect">~233</strong>&nbsp;W between 05:00 and 06:00. That floor is pure heat leaking through the insulation, replenished by the element firing ~2&nbsp;min every half-hour.
+    </div>
   </div>
   <div class="card">
-    <h3>How We Measured Standby Loss</h3>
+    <h3>Measuring Standby Loss</h3>
     <p class="desc">Two independent methods converge on ~200W of continuous heat loss through the tank insulation.</p>
     <div class="steps" style="grid-template-columns:repeat(2,1fr)">
       <div class="step">
         <div class="step-num">1</div>
         <h4>Overnight minimum</h4>
-        <p>Between 05:00 and 06:00 the tank has been cooling for 8+ hours. The element still fires ~2&nbsp;min per half-hour at 3.11&nbsp;kW, maintaining the thermostat setpoint. Measured: <strong id="standbyDirect">~200</strong>&nbsp;W.</p>
+        <p>Between 05:00 and 06:00 the tank has been cooling for 8+ hours. The element still fires ~2&nbsp;min per half-hour at 3.11&nbsp;kW, maintaining the thermostat setpoint. Measured: <strong>~233</strong>&nbsp;W.</p>
       </div>
       <div class="step">
         <div class="step-num">2</div>
@@ -257,7 +254,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 6. THE BILL ===== -->
+<!-- ===== 5. THE BILL ===== -->
 <section>
   <h2>The Bill</h2>
   <p class="section-lead">Monthly electricity cost on the Octopus Agile tariff, decomposed using the same methodology.</p>
@@ -283,15 +280,12 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
       <div class="cost-label">Total (annual)</div>
     </div>
   </div>
-  <div class="conclusion">
-    <strong>Bottom line:</strong> reverting to the Cozy 3-window timer would save roughly <strong>&pound;275/year</strong> with no reduction in hot water during the hours that matter. The element is identical across all regimes &mdash; it&rsquo;s not a different heater, not a changed thermostat, not more hot water usage. It&rsquo;s purely more run-time: 3.4&nbsp;h/day &rarr; 6.2&nbsp;h/day.
-  </div>
 </section>
 
-<!-- ===== 7. THE OPTIMAL TIMER ===== -->
+<!-- ===== 6. THE OPTIMAL TIMER ===== -->
 <section>
   <h2>The Optimal Timer</h2>
-  <p class="section-lead">Combining the energy model with Agile rate data, we can find the cheapest possible timer schedule &mdash; minimizing both energy waste and £/kWh.</p>
+  <p class="section-lead">The heater costs &pound;884/year &mdash; most of it standby waste. Can we do better than just reverting to Cozy?</p>
   <div class="card">
     <h3>How to Find the Best Schedule</h3>
     <p class="desc">The optimisation has two levers. Pulling both at once gives the biggest saving.</p>
@@ -342,7 +336,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 8. HOW WE KNOW ===== -->
+<!-- ===== 7. HOW WE KNOW ===== -->
 <section>
   <h2>How We Know: Separating Heater from Household</h2>
   <p class="section-lead">A single smart meter measures everything. Here&rsquo;s how we split heater energy from household baseload.</p>
@@ -709,6 +703,31 @@ const medianLinePlugin = {
 };
 const GREEN = '#2ed573';
 const RED = '#ff6b6b';
+const optimalWindowPlugin = {
+  id: 'optimalWindow',
+  beforeDraw(chart) {
+    const {ctx, chartArea: {left, right, top, bottom}, scales: {x}} = chart;
+    const x1 = x.getPixelForValue(22);
+    const x2 = x.getPixelForValue(32);
+    ctx.save();
+    ctx.fillStyle = 'rgba(46,213,115,0.08)';
+    ctx.fillRect(x1, top, x2 - x1, bottom - top);
+    ctx.fillStyle = 'rgba(46,213,115,0.55)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cheapest 5h window', (x1 + x2) / 2, top + 15);
+    [x1, x2].forEach(xp => {
+      ctx.strokeStyle = 'rgba(46,213,115,0.35)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(xp, top);
+      ctx.lineTo(xp, bottom);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+};
 new Chart(document.getElementById('chartAgileRate'), {
   type: 'bar',
   data: {
@@ -735,7 +754,7 @@ new Chart(document.getElementById('chartAgileRate'), {
     },
     plugins: { legend: { display: false } }
   },
-  plugins: [medianLinePlugin]
+  plugins: [medianLinePlugin, optimalWindowPlugin]
 });
 
 // ===== OPTIMAL TIMER SCHEDULES (bars + table) =====
