@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electricity Usage Analysis Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #a0a0a0;
+            font-size: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.1rem;
+            color: #00d4ff;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .kpi-card:hover {
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 12px 48px rgba(0, 212, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-unit {
+            font-size: 1rem;
+            color: #a0a0a0;
+            margin-left: 0.3rem;
+        }
+
+        .kpi-subtext {
+            font-size: 0.85rem;
+            color: #707070;
+            margin-top: 0.5rem;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 12px 48px rgba(0, 212, 255, 0.1);
+        }
+
+        .chart-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: #00d4ff;
+        }
+
+        .chart-description {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 1rem;
+        }
+
+        .chart-container.large {
+            height: 400px;
+        }
+
+        .heatmap-container {
+            position: relative;
+            height: 350px;
+        }
+
+        .insights-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        .insights-card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: #00d4ff;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .insight-item {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid #00d4ff;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+        }
+
+        .insight-item strong {
+            color: #00d4ff;
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .insight-item p {
+            color: #c0c0c0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        canvas {
+            max-width: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-value {
+                font-size: 1.8rem;
+            }
+
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
+            padding: 0.7rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background: rgba(0, 212, 255, 0.3);
+            border-color: #00d4ff;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Electricity Usage Analysis</h1>
+            <p>Interactive dashboard of your UK smart meter data (Feb 2025 - Feb 2026)</p>
+        </div>
+
+        <div class="loading" id="loading">Loading data...</div>
+
+        <div id="dashboard" style="display: none;">
+            <!-- KPI Summary Cards -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Consumption</div>
+                    <div class="kpi-value">7,596<span class="kpi-unit">kWh</span></div>
+                    <div class="kpi-subtext">Full analysis period</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Cost</div>
+                    <div class="kpi-value">£1,330<span class="kpi-unit"></span></div>
+                    <div class="kpi-subtext">12-month bill</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Daily Consumption</div>
+                    <div class="kpi-value">20.0<span class="kpi-unit">kWh</span></div>
+                    <div class="kpi-subtext">~48 kWh per billing day</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Rate Paid</div>
+                    <div class="kpi-value">17.5<span class="kpi-unit">p/kWh</span></div>
+                    <div class="kpi-subtext">Below typical UK rates</div>
+                </div>
+            </div>
+
+            <!-- Monthly Consumption & Cost Chart -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h2>Monthly Consumption & Cost</h2>
+                    <p class="chart-description">Bar chart of monthly consumption (kWh) with cost overlay (£). Notice the winter peaks in January and December.</p>
+                    <div class="chart-container large">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Timeline with Moving Average -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h2>Daily Consumption Timeline</h2>
+                    <p class="chart-description">Your daily consumption over the full period with a 7-day moving average. Early Feb shows move-in ramp from ~2.6 to ~23 kWh/day.</p>
+                    <div class="chart-container large">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hourly Heatmap & Hourly Profile -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h2>Hourly Usage Heatmap</h2>
+                    <p class="chart-description">Average consumption by hour of day and day of week. Darker blue = less usage, brighter red = peak usage. Evening peak visible 18:00-23:00.</p>
+                    <div class="heatmap-container">
+                        <canvas id="heatmapCanvas"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h2>Hourly Profile: Weekday vs Weekend</h2>
+                    <p class="chart-description">Average half-hourly consumption comparing working days to weekends. Weekend shows larger midday bump (cooking), evening peak similar both days.</p>
+                    <div class="chart-container large">
+                        <canvas id="hourlyProfileChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rate Distribution & Peak vs Off-Peak -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h2>Rate Distribution by Hour</h2>
+                    <p class="chart-description">Minimum, average, and maximum rates by hour of day. Cheapest at 2-3am (~13.8p), expensive at 16-17h (~34.6p) during peak pricing.</p>
+                    <div class="chart-container large">
+                        <canvas id="rateDistributionChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width">
+                    <h2>Peak vs Off-Peak Breakdown</h2>
+                    <p class="chart-description">How your consumption and costs split across different time periods. Off-peak: 27.1% of usage but only 22.4% of cost. Peak: 14.3% of usage but 22.5% of cost.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <h3 style="color: #a0a0a0; text-align: center; margin-bottom: 1rem;">Consumption Split (kWh)</h3>
+                            <div class="chart-container">
+                                <canvas id="peakOffPeakChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="color: #a0a0a0; text-align: center; margin-bottom: 1rem;">Cost Split (£)</h3>
+                            <div class="chart-container">
+                                <canvas id="peakOffPeakCostChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seasonal & Insights -->
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <h2>Seasonal Comparison</h2>
+                    <p class="chart-description">Average daily consumption by season. Winter significantly higher due to heating loads. Summer lowest at ~16 kWh/day.</p>
+                    <div class="chart-container large">
+                        <canvas id="seasonalChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Insights -->
+            <div class="insights-card">
+                <h2>Key Insights & Findings</h2>
+                <div class="insights-grid">
+                    <div class="insight-item">
+                        <strong>Move-In Detected</strong>
+                        <p>Early February 2025 shows a ramp from 2.6 kWh/day to 23 kWh/day over the first week, indicating a move-in with gradual occupation of the property.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Evening Usage Peak</strong>
+                        <p>60% of daily consumption occurs between 18:00-02:00. Strong peak at 20:00-23:00 (cooking, heating, entertainment). Shifting load earlier could save money.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Winter Peak: January 2026</strong>
+                        <p>January 2026 was the highest month: 875 kWh costing £177.66. Driven by heating loads during cold weather.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Seasonal Variation</strong>
+                        <p>Summer usage ~16 kWh/day vs Winter ~23 kWh/day represents a 44% seasonal increase. No AC usage; heating dominates the differential.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Negative-Rate Periods</strong>
+                        <p>280 intervals with negative rates (you were paid to use electricity) mostly in spring/summer. These are valuable for flexible consumption.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Peak Hours Efficiency</strong>
+                        <p>Peak hours (16:00-20:00) represent just 14% of kWh but 22.5% of cost. Significant savings potential by shifting consumption to off-peak.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>NYE 2025 Peak</strong>
+                        <p>December 31st, 2025 was the single highest usage day at 40.4 kWh, likely due to entertaining guests and heating.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Baseload Analysis</strong>
+                        <p>Overnight minimum averages ~0.12 kWh per half-hour (~240W always-on load). Likely refrigerator, standby power, and heating baseline.</p>
+                    </div>
+
+                    <div class="insight-item">
+                        <strong>Tariff Performance</strong>
+                        <p>Average rate paid (17.51p) is below the average available rate (18.21p), indicating good tariff engagement and off-peak usage behaviour.</p>
+                    </div>
+
+                    <div class="insight-item full-width">
+                        <strong>Annual Cost Projection</strong>
+                        <p>Based on 12 months of data (Feb 2025 - Feb 2026), your electricity is tracking for ~£1,400/year. Agile tariff benefited from negative-rate periods and off-peak shifting.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allData = [];
+        let dailyData = [];
+        let charts = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAndProcessData();
+        });
+
+        function loadAndProcessData() {
+            Papa.parse('usage.csv', {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                download: true,
+                complete: function(results) {
+                    allData = results.data.filter(row => row.interval_start && row.kwh !== undefined);
+                    processData();
+                    initializeCharts();
+                    showDashboard();
+                },
+                error: function(error) {
+                    document.getElementById('loading').innerHTML = 'Error loading CSV: ' + error.message;
+                }
+            });
+        }
+
+        function processData() {
+            // Process daily data
+            const dailyMap = new Map();
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start).toISOString().split('T')[0];
+                if (!dailyMap.has(date)) {
+                    dailyMap.set(date, { date, kwh: 0, cost: 0, count: 0 });
+                }
+                const daily = dailyMap.get(date);
+                daily.kwh += row.kwh;
+                daily.cost += row.cost_p;
+                daily.count++;
+            });
+
+            dailyData = Array.from(dailyMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        function initializeCharts() {
+            createMonthlyChart();
+            createDailyChart();
+            createHeatmap();
+            createHourlyProfileChart();
+            createRateDistributionChart();
+            createPeakOffPeakChart();
+            createSeasonalChart();
+        }
+
+        function createMonthlyChart() {
+            const monthlyMap = new Map();
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start);
+                const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                if (!monthlyMap.has(monthKey)) {
+                    monthlyMap.set(monthKey, { kwh: 0, cost: 0 });
+                }
+                const monthly = monthlyMap.get(monthKey);
+                monthly.kwh += row.kwh;
+                monthly.cost += row.cost_p / 100;
+            });
+
+            const months = Array.from(monthlyMap.entries()).sort();
+            const labels = months.map(([key, _]) => {
+                const [year, month] = key.split('-');
+                return new Date(year, parseInt(month) - 1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+            });
+            const kwhs = months.map(([_, data]) => parseFloat(data.kwh.toFixed(1)));
+            const costs = months.map(([_, data]) => parseFloat(data.cost.toFixed(2)));
+
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            charts.monthly = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Consumption (kWh)',
+                            data: kwhs,
+                            backgroundColor: 'rgba(0, 212, 255, 0.3)',
+                            borderColor: 'rgba(0, 212, 255, 0.8)',
+                            borderWidth: 2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Cost (£)',
+                            data: costs,
+                            borderColor: 'rgba(255, 100, 100, 0.8)',
+                            borderWidth: 2,
+                            type: 'line',
+                            fill: false,
+                            yAxisID: 'y1',
+                            pointBackgroundColor: 'rgba(255, 100, 100, 1)',
+                            pointBorderColor: '#fff',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#a0a0a0' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'kWh', color: '#a0a0a0' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#a0a0a0' },
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: '£', color: '#a0a0a0' }
+                        },
+                        x: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDailyChart() {
+            const labels = dailyData.map(d => new Date(d.date));
+            const kwhs = dailyData.map(d => parseFloat(d.kwh.toFixed(2)));
+
+            // Calculate 7-day moving average
+            const movingAvg = [];
+            for (let i = 0; i < kwhs.length; i++) {
+                const start = Math.max(0, i - 3);
+                const end = Math.min(kwhs.length, i + 4);
+                const avg = kwhs.slice(start, end).reduce((a, b) => a + b, 0) / (end - start);
+                movingAvg.push(parseFloat(avg.toFixed(2)));
+            }
+
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            charts.daily = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Daily Consumption (kWh)',
+                            data: kwhs,
+                            borderColor: 'rgba(0, 212, 255, 0.4)',
+                            backgroundColor: 'rgba(0, 212, 255, 0.05)',
+                            borderWidth: 1,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: 'rgba(0, 212, 255, 0.8)',
+                            tension: 0.2
+                        },
+                        {
+                            label: '7-Day Moving Average',
+                            data: movingAvg,
+                            borderColor: 'rgba(255, 150, 0, 1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#a0a0a0' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: { month: 'MMM yyyy' }
+                            },
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'kWh', color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createHeatmap() {
+            // Build hourly/day of week matrix
+            const hourlyByDow = {};
+            for (let i = 0; i < 7; i++) {
+                hourlyByDow[i] = new Array(24).fill(0).map(() => []);
+            }
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start);
+                const dow = date.getDay();
+                const hour = date.getHours();
+                hourlyByDow[dow][hour].push(row.kwh);
+            });
+
+            // Calculate averages
+            const heatmapData = [];
+            const dowNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            for (let day = 0; day < 7; day++) {
+                for (let hour = 0; hour < 24; hour++) {
+                    const values = hourlyByDow[day][hour];
+                    const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+                    heatmapData.push({
+                        x: hour,
+                        y: day,
+                        v: avg
+                    });
+                }
+            }
+
+            const maxValue = Math.max(...heatmapData.map(d => d.v));
+
+            const canvas = document.getElementById('heatmapCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const cellWidth = width / 24;
+            const cellHeight = height / 7;
+
+            heatmapData.forEach(cell => {
+                const intensity = cell.v / maxValue;
+                const hue = (1 - intensity) * 240; // Blue to Red
+                const saturation = 50 + intensity * 50;
+                const lightness = 30 + intensity * 20;
+
+                ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                ctx.fillRect(cell.x * cellWidth, cell.y * cellHeight, cellWidth, cellHeight);
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cell.x * cellWidth, cell.y * cellHeight, cellWidth, cellHeight);
+            });
+
+            // Draw labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            for (let i = 0; i < 24; i++) {
+                ctx.fillText(i, i * cellWidth + cellWidth / 2, -10);
+            }
+
+            ctx.textAlign = 'right';
+            for (let i = 0; i < 7; i++) {
+                ctx.fillText(dowNames[i], -10, i * cellHeight + cellHeight / 2);
+            }
+        }
+
+        function createHourlyProfileChart() {
+            const hourlyByType = {
+                weekday: new Array(48).fill(0).map(() => []),
+                weekend: new Array(48).fill(0).map(() => []
+            });
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start);
+                const dow = date.getDay();
+                const hours = date.getHours();
+                const minutes = date.getMinutes();
+                const halfHourIndex = hours * 2 + (minutes === 30 ? 1 : 0);
+
+                if (dow === 0 || dow === 6) {
+                    hourlyByType.weekend[halfHourIndex].push(row.kwh);
+                } else {
+                    hourlyByType.weekday[halfHourIndex].push(row.kwh);
+                }
+            });
+
+            const weekdayAvg = hourlyByType.weekday.map(arr => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+            const weekendAvg = hourlyByType.weekend.map(arr => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+            const labels = [];
+            for (let i = 0; i < 48; i++) {
+                const hours = Math.floor(i / 2);
+                const mins = (i % 2) * 30;
+                labels.push(String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0'));
+            }
+
+            const ctx = document.getElementById('hourlyProfileChart').getContext('2d');
+            charts.hourlyProfile = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Weekday (Mon-Fri)',
+                            data: weekdayAvg,
+                            borderColor: 'rgba(0, 212, 255, 0.8)',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        },
+                        {
+                            label: 'Weekend (Sat-Sun)',
+                            data: weekendAvg,
+                            borderColor: 'rgba(255, 150, 0, 0.8)',
+                            backgroundColor: 'rgba(255, 150, 0, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#a0a0a0' } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a0a0a0', maxRotation: 45, minRotation: 45 },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'kWh', color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createRateDistributionChart() {
+            const ratesByHour = {};
+            for (let i = 0; i < 24; i++) {
+                ratesByHour[i] = [];
+            }
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start);
+                const hour = date.getHours();
+                ratesByHour[hour].push(row.rate_p_kwh);
+            });
+
+            const labels = [];
+            const minRates = [];
+            const avgRates = [];
+            const maxRates = [];
+
+            for (let i = 0; i < 24; i++) {
+                labels.push(String(i).padStart(2, '0') + ':00');
+                const rates = ratesByHour[i].sort((a, b) => a - b);
+                minRates.push(parseFloat(rates[0].toFixed(2)));
+                avgRates.push(parseFloat((rates.reduce((a, b) => a + b, 0) / rates.length).toFixed(2)));
+                maxRates.push(parseFloat(rates[rates.length - 1].toFixed(2)));
+            }
+
+            const ctx = document.getElementById('rateDistributionChart').getContext('2d');
+            charts.rateDistribution = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Max Rate (p/kWh)',
+                            data: maxRates,
+                            borderColor: 'rgba(255, 100, 100, 0.8)',
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Avg Rate (p/kWh)',
+                            data: avgRates,
+                            borderColor: 'rgba(0, 212, 255, 0.8)',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Min Rate (p/kWh)',
+                            data: minRates,
+                            borderColor: 'rgba(0, 255, 100, 0.8)',
+                            fill: false,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#a0a0a0' } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'p/kWh', color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPeakOffPeakChart() {
+            // Categorize intervals by time period
+            const periods = { 'Off-Peak': 0, 'Peak': 0, 'Standard': 0 };
+            const periodsCost = { 'Off-Peak': 0, 'Peak': 0, 'Standard': 0 };
+
+            allData.forEach(row => {
+                const date = new Date(row.interval_start);
+                const hour = date.getHours();
+                const dow = date.getDay();
+                let period = 'Standard';
+
+                // Off-Peak: 23:00-06:00
+                if (hour >= 23 || hour < 6) period = 'Off-Peak';
+                // Peak: 16:00-19:00 weekdays
+                else if (hour >= 16 && hour < 20 && dow > 0 && dow < 6) period = 'Peak';
+
+                periods[period] += row.kwh;
+                periodsCost[period] += row.cost_p / 100;
+            });
+
+            const colors = ['rgba(0, 212, 255, 0.7)', 'rgba(255, 100, 100, 0.7)', 'rgba(100, 200, 100, 0.7)'];
+            const borderColors = ['rgba(0, 212, 255, 1)', 'rgba(255, 100, 100, 1)', 'rgba(100, 200, 100, 1)'];
+
+            // Consumption chart
+            const ctx1 = document.getElementById('peakOffPeakChart').getContext('2d');
+            charts.peakOffPeak = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Off-Peak', 'Peak', 'Standard'],
+                    datasets: [{
+                        data: [
+                            parseFloat(periods['Off-Peak'].toFixed(1)),
+                            parseFloat(periods['Peak'].toFixed(1)),
+                            parseFloat(periods['Standard'].toFixed(1))
+                        ],
+                        backgroundColor: colors,
+                        borderColor: borderColors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#a0a0a0' },
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Cost chart
+            const ctx2 = document.getElementById('peakOffPeakCostChart').getContext('2d');
+            charts.peakOffPeakCost = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Off-Peak', 'Peak', 'Standard'],
+                    datasets: [{
+                        data: [
+                            parseFloat(periodsCost['Off-Peak'].toFixed(2)),
+                            parseFloat(periodsCost['Peak'].toFixed(2)),
+                            parseFloat(periodsCost['Standard'].toFixed(2))
+                        ],
+                        backgroundColor: colors,
+                        borderColor: borderColors,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#a0a0a0' },
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSeasonalChart() {
+            const seasons = {
+                'Winter': [],
+                'Spring': [],
+                'Summer': [],
+                'Autumn': []
+            };
+
+            dailyData.forEach(day => {
+                const date = new Date(day.date);
+                const month = date.getMonth();
+
+                if (month === 11 || month === 0 || month === 1) {
+                    seasons['Winter'].push(day.kwh);
+                } else if (month >= 2 && month <= 4) {
+                    seasons['Spring'].push(day.kwh);
+                } else if (month >= 5 && month <= 7) {
+                    seasons['Summer'].push(day.kwh);
+                } else {
+                    seasons['Autumn'].push(day.kwh);
+                }
+            });
+
+            const seasonalAvg = Object.entries(seasons).map(([name, values]) => ({
+                name,
+                avg: parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(1))
+            }));
+
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            charts.seasonal = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: seasonalAvg.map(s => s.name),
+                    datasets: [{
+                        label: 'Average Daily Consumption (kWh)',
+                        data: seasonalAvg.map(s => s.avg),
+                        backgroundColor: [
+                            'rgba(100, 150, 255, 0.7)',
+                            'rgba(100, 255, 150, 0.7)',
+                            'rgba(255, 200, 100, 0.7)',
+                            'rgba(255, 150, 100, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(100, 150, 255, 1)',
+                            'rgba(100, 255, 150, 1)',
+                            'rgba(255, 200, 100, 1)',
+                            'rgba(255, 150, 100, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#a0a0a0' } }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0a0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            title: { display: true, text: 'kWh', color: '#a0a0a0' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function showDashboard() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

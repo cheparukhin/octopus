@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Immersion Heater Deep-Dive Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background:#0a0e17; color:#c8d6e5; line-height:1.6; }
+.container { max-width:1200px; margin:0 auto; padding:20px; }
+h1 { text-align:center; font-size:1.8em; margin:20px 0 8px; color:#fff; }
+.subtitle { text-align:center; color:#7f8fa6; margin-bottom:30px; font-size:0.95em; }
+.card { background:#141b2d; border-radius:12px; padding:24px; margin-bottom:24px; border:1px solid #1e2a42; }
+.card h2 { color:#00d2ff; font-size:1.15em; margin-bottom:4px; }
+.card .desc { color:#7f8fa6; font-size:0.85em; margin-bottom:16px; }
+.chart-container { position:relative; width:100%; }
+.chart-tall { height:400px; }
+.chart-med { height:320px; }
+.chart-short { height:260px; }
+.row { display:flex; gap:24px; }
+.row > .card { flex:1; min-width:0; }
+.insight-box { background:#0d1321; border-left:3px solid #00d2ff; padding:14px 18px; margin:12px 0; border-radius:0 8px 8px 0; font-size:0.92em; }
+.insight-box strong { color:#00d2ff; }
+.calc-box { background:#0d1321; padding:14px 18px; margin:12px 0; border-radius:8px; font-family:monospace; font-size:0.85em; white-space:pre-wrap; color:#a4b0be; }
+.calc-box .highlight { color:#ffd32a; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.85em; margin:10px 0; }
+th { background:#1e2a42; color:#00d2ff; padding:8px 12px; text-align:right; }
+td { padding:7px 12px; border-bottom:1px solid #1e2a42; text-align:right; }
+th:first-child, td:first-child { text-align:left; }
+tr:hover td { background:#1a2235; }
+.legend-custom { display:flex; gap:20px; flex-wrap:wrap; margin:8px 0 4px; font-size:0.82em; }
+.legend-item { display:flex; align-items:center; gap:6px; }
+.legend-dot { width:12px; height:12px; border-radius:3px; }
+.section-num { display:inline-block; background:#00d2ff; color:#0a0e17; width:24px; height:24px; border-radius:50%; text-align:center; line-height:24px; font-size:0.8em; font-weight:700; margin-right:8px; }
+@media(max-width:900px) { .row { flex-direction:column; } }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Immersion Heater: Why Is It Using 2x The Energy?</h1>
+<p class="subtitle">Deep-dive analysis of electricity usage data &middot; Feb 2025 &ndash; Feb 2026 &middot; 18,240 half-hourly readings</p>
+
+<!-- ===== CHART 1: Monthly Decomposition ===== -->
+<div class="card">
+  <h2><span class="section-num">1</span>Monthly Consumption: Heater vs Everything Else</h2>
+  <p class="desc">Readings &gt;0.8 kWh per half-hour classified as heater (immersion element is ~3 kW, producing ~1.5 kWh when on for a full slot). Everything &le;0.8 kWh is household loads.</p>
+  <div class="chart-container chart-tall"><canvas id="chart1"></canvas></div>
+  <div class="insight-box">
+    <strong>Key finding:</strong> The "other" load (grey) stabilises at ~10&ndash;11.5 kWh/day from June onwards and barely changes between summer and deep winter. <strong>The entire seasonal swing is driven by the heater (cyan).</strong>
+  </div>
+</div>
+
+<!-- ===== CHART 2: Element On-Time ===== -->
+<div class="card">
+  <h2><span class="section-num">2</span>Heater Element On-Time Per Day</h2>
+  <p class="desc">Hours per day the immersion element fires (&gt;0.8 kWh readings &times; 0.5h each), and average power when firing.</p>
+  <div class="chart-container chart-med"><canvas id="chart2"></canvas></div>
+  <div class="table-wrap">
+    <table id="elementTable">
+      <thead><tr><th>Month</th><th>On-Time (h/day)</th><th>Heater kWh/day</th><th>Avg kW When On</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="insight-box">
+    <strong>The element draws the same ~2.8 kW in both regimes.</strong> It hasn't changed. What changed is that it fires for <strong>5.6 hours/day</strong> in new winter vs <strong>2.7 hours/day</strong> in old winter &mdash; more than double.
+  </div>
+</div>
+
+<!-- ===== CHART 3: Half-hourly profiles ===== -->
+<div class="card">
+  <h2><span class="section-num">3</span>Half-Hourly Consumption Profile: Old vs New Regime</h2>
+  <p class="desc">Average kWh per half-hour slot across the day. Old regime = Feb&ndash;Mar 2025, New regime = Dec 2025&ndash;Feb 2026, Summer = Jul&ndash;Aug 2025.</p>
+  <div class="chart-container chart-tall"><canvas id="chart3"></canvas></div>
+  <div class="insight-box">
+    <strong>Old regime:</strong> sharp spike at 20:00&ndash;22:30 (heater in the 19&ndash;22 cheap window), small bump at 06:00&ndash;07:00. Rest of the day near-idle.<br>
+    <strong>New regime:</strong> massive overnight plateau 21:00&ndash;02:00 (heater recovering after 16&ndash;20 off-window), plus elevated baseline all day from continuous thermostat cycling.
+  </div>
+</div>
+
+<!-- ===== CHART 4: Heater Firing Events by Hour ===== -->
+<div class="row">
+<div class="card">
+  <h2><span class="section-num">4a</span>Heater Firings by Hour: Old</h2>
+  <p class="desc">Events &gt;1.0 kWh per day, by hour. Feb&ndash;Mar 2025.</p>
+  <div class="chart-container chart-short"><canvas id="chart4a"></canvas></div>
+</div>
+<div class="card">
+  <h2><span class="section-num">4b</span>Heater Firings by Hour: New</h2>
+  <p class="desc">Events &gt;1.0 kWh per day, by hour. Dec 2025&ndash;Feb 2026.</p>
+  <div class="chart-container chart-short"><canvas id="chart4b"></canvas></div>
+</div>
+</div>
+<div class="card" style="margin-top:-12px">
+  <div class="insight-box">
+    <strong>Old regime:</strong> heater concentrated at 20:00 (1.6 events/day). Total: 4.6 events/day in a tight 19&ndash;22 window.<br>
+    <strong>New regime:</strong> heater spread across 21:00&ndash;02:00 (1.0&ndash;1.2 events/hour), with a long tail of smaller firings all day. Total: 8.2 events/day.
+  </div>
+</div>
+
+<!-- ===== CHART 5: Distribution ===== -->
+<div class="card">
+  <h2><span class="section-num">5</span>Distribution of Half-Hourly Readings</h2>
+  <p class="desc">How consumption per slot is distributed. Each bin is 0.1 kWh wide. Mar 2025 (old regime) vs Jan 2026 (new regime) vs Jul 2025 (summer baseline).</p>
+  <div class="chart-container chart-tall"><canvas id="chart5"></canvas></div>
+  <div class="insight-box">
+    <strong>Old regime (red):</strong> 43% of all readings were below 0.08 kWh (idle). A small tail of 1.5&ndash;2.0 kWh readings (heater bursts at 20:00).<br>
+    <strong>New regime (cyan):</strong> Only 0.2% of readings are idle. The entire distribution shifted right. A much fatter tail of 1.5&ndash;2.0 kWh readings spanning many more hours.
+  </div>
+</div>
+
+<!-- ===== CHART 6: Daily timeline decomposed ===== -->
+<div class="card">
+  <h2><span class="section-num">6</span>Daily Consumption Timeline (Decomposed)</h2>
+  <p class="desc">Stacked: heater energy (readings &gt;0.8 kWh) in cyan, household in grey. 7-day rolling average in white.</p>
+  <div class="chart-container chart-tall"><canvas id="chart6"></canvas></div>
+  <div class="insight-box">
+    <strong>Transition is gradual, not a single switch.</strong> The ramp starts late August and intensifies through autumn. This tracks the onset of colder mains water temperature and possibly the timer change happening in stages.
+  </div>
+</div>
+
+<!-- ===== CHART 7: Lowest-consumption day profiles ===== -->
+<div class="card">
+  <h2><span class="section-num">7</span>Quietest Day Comparison: Old vs New Regime</h2>
+  <p class="desc">The lowest-consumption day in each regime. These approximate the "floor" &mdash; minimal hot water draws, just standing losses + baseload.</p>
+  <div class="chart-container chart-tall"><canvas id="chart7"></canvas></div>
+  <div class="calc-box">Old regime quietest day: <span class="highlight">2025-02-22 (Sat) = 8.9 kWh</span>
+  &bull; Long stretches at 0.05&ndash;0.06 kWh (100&ndash;120W idle)
+  &bull; Heater fires in 2&ndash;3 short bursts totalling ~3 kWh
+
+New regime quietest day: <span class="highlight">2025-12-04 (Thu) = 17.2 kWh</span>
+  &bull; FLOOR readings now 0.15&ndash;0.20 kWh (higher baseline devices)
+  &bull; Heater fires throughout the day in scattered bursts totalling ~9 kWh
+  &bull; Even on the quietest day, the new regime uses <span class="highlight">2x the energy</span></div>
+</div>
+
+<!-- ===== Summary calculation ===== -->
+<div class="card">
+  <h2><span class="section-num">8</span>The Calculation: Where The Extra Energy Goes</h2>
+  <div class="calc-box"><span class="highlight">OLD REGIME (Feb&ndash;Mar 2025): 16.2 kWh/day</span>
+  Heater (>0.8 kWh readings):   7.5 kWh/day  &bull;  Element on: 2.7 h/day
+  Household (≤0.8 kWh readings): 8.7 kWh/day  (low &mdash; still settling in after move-in)
+
+<span class="highlight">NEW REGIME (Dec 2025&ndash;Jan 2026): 26.2 kWh/day</span>
+  Heater (>0.8 kWh readings):  15.0 kWh/day  &bull;  Element on: 5.6 h/day
+  Household (≤0.8 kWh readings): 11.2 kWh/day  (stable since June &mdash; same as summer)
+
+<span class="highlight">THE GAP: +10.0 kWh/day</span>
+  Heater increase:    +7.5 kWh/day  (75% of gap)  &larr; TIMER REGIME CHANGE
+  Household increase: +2.5 kWh/day  (25% of gap)  &larr; MOVE-IN SETTLING (not seasonal)
+
+<span class="highlight">WHY DOES THE SAME HEATER USE 2x THE ENERGY?</span>
+  Old regime: element enabled ~6 h/day (in cheap-rate windows)
+  New regime: element enabled ~20 h/day (24/7 minus 16&ndash;20)
+
+  Old regime: tank held at thermostat setpoint only during windows.
+              Between windows, tank cooled freely. No energy consumed.
+              Average tank temperature across the day: well BELOW setpoint.
+              Lower avg temp &rarr; lower heat loss rate &rarr; less energy needed.
+
+  New regime: tank held at FULL setpoint ~20 hours/day.
+              Every temperature dip immediately corrected.
+              Average tank temperature across the day: AT or NEAR setpoint.
+              Higher avg temp &rarr; higher heat loss rate &rarr; more energy needed.
+
+  The old enforced off-periods acted as free temperature setback.
+  The new regime eliminates that setback = more standing losses replenished.
+
+<span class="highlight">ELEMENT POWER IS IDENTICAL IN BOTH REGIMES: ~2.8 kW when firing.</span>
+  It's not a different element. Not a changed thermostat. Not more hot water usage.
+  It's purely more run-time: 2.7 h/day &rarr; 5.6 h/day.</div>
+</div>
+
+<!-- ===== CHART 9: Overnight heatmap ===== -->
+<div class="card">
+  <h2><span class="section-num">9</span>Overnight Heater Activity: Week-by-Week</h2>
+  <p class="desc">Average kWh per half-hour slot during the key overnight hours (22:00&ndash;03:00) when the heater fires most. Stacked by hour band &mdash; each column is one week.</p>
+  <div class="chart-container chart-tall"><canvas id="chart9"></canvas></div>
+  <div class="insight-box">
+    <strong>Old regime (left):</strong> activity concentrated in the 22:00&ndash;23:00 band (cheap-rate window). Hours 00:00&ndash;03:00 are almost empty.<br>
+    <strong>New regime (right):</strong> activity spreads across all overnight hours. The 22:00&ndash;01:00 band lights up as the heater recovers after the 16:00&ndash;20:00 off-window, and stays elevated until 03:00.
+  </div>
+</div>
+
+<!-- ===== CHART 10: Monthly cost ===== -->
+<div class="card">
+  <h2><span class="section-num">10</span>Monthly Cost: Heater vs Household</h2>
+  <p class="desc">Electricity cost in &pound; split by heater readings (&gt;0.8 kWh) and household readings (&le;0.8 kWh). Line shows heater share of total cost.</p>
+  <div class="chart-container chart-tall"><canvas id="chart10"></canvas></div>
+  <div class="insight-box">
+    <strong>January 2026 peak:</strong> &pound;177.66 total &mdash; the heater alone cost <strong>&pound;99.20</strong> (56%). In summer, the heater drops to &pound;23&ndash;25/month (29&ndash;33%).<br>
+    Despite lower per-kWh Agile rates in new regime (17.4p vs 21.3p), the volume increase overwhelms the rate savings.
+  </div>
+</div>
+
+<!-- ===== Section 11: The Price Tag ===== -->
+<div class="card">
+  <h2><span class="section-num">11</span>The Price Tag: What The Regime Change Costs</h2>
+  <div class="calc-box"><span class="highlight">OLD REGIME DAILY COST: &pound;3.28/day</span>
+  Heater avg rate when firing: 21.3 p/kWh (mostly evening cheap-rate slots)
+  Household avg rate:          22.8 p/kWh
+
+<span class="highlight">NEW REGIME DAILY COST: &pound;4.85/day (+48%)</span>
+  Heater avg rate when firing: 17.4 p/kWh (overnight slots &mdash; even cheaper!)
+  Household avg rate:          20.2 p/kWh
+
+<span class="highlight">THE PARADOX: cheaper rates, higher bills.</span>
+  The new regime fires the heater during cheaper overnight hours (17.4p vs 21.3p),
+  BUT the element runs 2x as long (5.6h vs 2.7h), so total cost rises 48%.
+
+<span class="highlight">EXTRA COST OF THE NEW REGIME:</span>
+  Per day:   <span class="highlight">+&pound;1.57</span>
+  Per month: <span class="highlight">+&pound;47.79</span>
+  Per year:  <span class="highlight">+&pound;573</span>
+
+<span class="highlight">ANNUAL ELECTRICITY BREAKDOWN:</span>
+  Heater:    &pound;619  (48% of total)
+  Household: &pound;659  (52% of total)
+  Total:     &pound;1,277</div>
+  <div class="insight-box">
+    <strong>Bottom line:</strong> Reverting to the old timer regime (element enabled only in 2&ndash;3 cheap-rate windows per day) would save roughly <strong>&pound;48/month</strong> or <strong>&pound;573/year</strong> &mdash; with no reduction in usable hot water during the hours that matter.
+  </div>
+</div>
+
+</div><!-- container -->
+
+<script>
+// Load the pre-computed data
+fetch('report_data.json').then(r => r.json()).then(D => {
+
+const CYAN = '#00d2ff';
+const CYAN50 = 'rgba(0,210,255,0.5)';
+const GREY = '#7f8fa6';
+const GREY50 = 'rgba(127,143,166,0.5)';
+const RED = '#ff6b6b';
+const RED50 = 'rgba(255,107,107,0.5)';
+const YELLOW = '#ffd32a';
+const WHITE = '#ffffff';
+const GRID = 'rgba(255,255,255,0.06)';
+const FONT = '#a4b0be';
+Chart.defaults.color = FONT;
+Chart.defaults.borderColor = GRID;
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+// ===== CHART 1: Monthly decomposition =====
+new Chart(document.getElementById('chart1'), {
+  type: 'bar',
+  data: {
+    labels: D.monthly.map(m => m.month),
+    datasets: [
+      { label: 'Heater (>0.8 kWh readings)', data: D.monthly.map(m => m.heater),
+        backgroundColor: CYAN50, borderColor: CYAN, borderWidth: 1 },
+      { label: 'Household (≤0.8 kWh readings)', data: D.monthly.map(m => m.other),
+        backgroundColor: GREY50, borderColor: GREY, borderWidth: 1 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { stacked: true },
+      y: { stacked: true, title: { display:true, text:'Avg kWh / day' } }
+    },
+    plugins: { legend: { position: 'top' } }
+  }
+});
+
+// ===== CHART 2: Element on-time =====
+new Chart(document.getElementById('chart2'), {
+  type: 'bar',
+  data: {
+    labels: D.element.map(e => e.month),
+    datasets: [
+      { label: 'Element On-Time (h/day)', data: D.element.map(e => e.on_hours),
+        backgroundColor: CYAN50, borderColor: CYAN, borderWidth: 1, yAxisID: 'y' },
+      { label: 'Avg kW When On', data: D.element.map(e => e.avg_kw),
+        type: 'line', borderColor: YELLOW, backgroundColor: 'transparent',
+        pointRadius: 4, pointBackgroundColor: YELLOW, yAxisID: 'y1', borderWidth: 2 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { title: { display:true, text:'Hours / day' }, beginAtZero:true },
+      y1: { position:'right', title: { display:true, text:'kW' }, min:0, max:4, grid:{display:false} }
+    }
+  }
+});
+// Populate table
+const tbody = document.querySelector('#elementTable tbody');
+D.element.forEach(e => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${e.month}</td><td>${e.on_hours}</td><td>${e.heater_kwh}</td><td>${e.avg_kw}</td>`;
+  tbody.appendChild(tr);
+});
+
+// ===== CHART 3: Half-hourly profiles =====
+new Chart(document.getElementById('chart3'), {
+  type: 'line',
+  data: {
+    labels: D.profiles.old.map(p => p.slot),
+    datasets: [
+      { label: 'Old regime (Feb–Mar 2025)', data: D.profiles.old.map(p => p.mean),
+        borderColor: RED, backgroundColor: RED50, fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+      { label: 'New regime (Dec 2025–Feb 2026)', data: D.profiles.new.map(p => p.mean),
+        borderColor: CYAN, backgroundColor: CYAN50, fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0 },
+      { label: 'Summer (Jul–Aug 2025)', data: D.profiles.summer.map(p => p.mean),
+        borderColor: GREY, backgroundColor: 'transparent', borderDash: [5,5], tension: 0.3, borderWidth: 1.5, pointRadius: 0 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display:true, text:'Time of day' },
+           ticks: { maxTicksLimit: 24, callback: function(v,i) { return i%2===0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display:true, text:'Avg kWh per half-hour' }, beginAtZero:true }
+    },
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: { position: 'top' }
+    }
+  }
+});
+
+// ===== CHART 4a/4b: Firing events =====
+const hours = Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`);
+function firingChart(id, data, color, label) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels: hours,
+      datasets: [{
+        label: label, data: hours.map((_,i) => data[i] || 0),
+        backgroundColor: color === CYAN ? CYAN50 : RED50, borderColor: color, borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { title: { display:true, text:'Events/day' }, beginAtZero:true, max:2.0 } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+firingChart('chart4a', D.firing.old, RED, 'Old regime');
+firingChart('chart4b', D.firing.new, CYAN, 'New regime');
+
+// ===== CHART 5: Distribution =====
+const distStyle = {
+  'Mar 2025 (old)':          { bg: RED50,  border: RED  },
+  'Jul 2025 (summer)':       { bg: GREY50, border: GREY },
+  'Jan 2026 (new winter)':   { bg: CYAN50, border: CYAN },
+};
+new Chart(document.getElementById('chart5'), {
+  type: 'bar',
+  data: {
+    labels: D.dist_labels,
+    datasets: Object.keys(D.distributions).map(k => ({
+      label: k, data: D.distributions[k],
+      backgroundColor: (distStyle[k]||{}).bg || GREY50,
+      borderColor: (distStyle[k]||{}).border || GREY, borderWidth: 1
+    }))
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display:true, text:'kWh per half-hour slot' },
+           ticks: { maxTicksLimit: 18, callback: function(v,i) { return i%3===0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display:true, text:'Number of readings' } }
+    },
+    plugins: { legend: { position: 'top' } }
+  }
+});
+
+// ===== CHART 6: Daily timeline =====
+new Chart(document.getElementById('chart6'), {
+  type: 'bar',
+  data: {
+    labels: D.daily.map(d => d.date),
+    datasets: [
+      { label: 'Heater', data: D.daily.map(d => d.heater),
+        backgroundColor: CYAN50, borderColor: 'transparent', borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 },
+      { label: 'Household', data: D.daily.map(d => d.other),
+        backgroundColor: GREY50, borderColor: 'transparent', borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 },
+      { label: '7-day avg', data: D.daily.map(d => d.rolling7),
+        type: 'line', borderColor: WHITE, backgroundColor: 'transparent',
+        pointRadius: 0, borderWidth: 1.5, tension: 0.3, spanGaps: true }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { stacked: true, ticks: { maxTicksLimit: 13, callback: function(v,i) {
+        const d = D.daily[i]?.date; return d ? d.substring(0,7) : '';
+      } } },
+      y: { stacked: true, title: { display:true, text:'kWh / day' } }
+    }
+  }
+});
+
+// ===== CHART 7: Low-day profiles =====
+new Chart(document.getElementById('chart7'), {
+  type: 'bar',
+  data: {
+    labels: D.low_profiles.old_low.map(p => p.slot),
+    datasets: [
+      { label: 'Old quietest day (Feb 22, 8.9 kWh)', data: D.low_profiles.old_low.map(p => p.kwh),
+        backgroundColor: RED50, borderColor: RED, borderWidth: 1 },
+      { label: 'New quietest day (Dec 4, 17.2 kWh)', data: D.low_profiles.new_low.map(p => p.kwh),
+        backgroundColor: CYAN50, borderColor: CYAN, borderWidth: 1 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { ticks: { maxTicksLimit: 24, callback: function(v,i) { return i%4===0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display:true, text:'kWh' }, beginAtZero:true }
+    }
+  }
+});
+
+// ===== CHART 9: Overnight heatmap (matrix as grouped bars) =====
+{
+  const hourLabels = ['22:00','23:00','00:00','01:00','02:00','03:00'];
+  const hourOrder = [22,23,0,1,2,3];
+  const weeks = [...new Set(D.heatmap.map(h => h.week))].sort();
+  const lookup = {};
+  D.heatmap.forEach(h => { lookup[h.week + '_' + h.hour] = h.kwh; });
+
+  // Build one dataset per hour-band, each with one bar per week
+  const heatColors = ['#00d2ff','#00b4d8','#0096c7','#0077b6','#023e8a','#03045e'];
+  const heatBg = ['rgba(0,210,255,0.7)','rgba(0,180,216,0.7)','rgba(0,150,199,0.7)','rgba(0,119,182,0.7)','rgba(2,62,138,0.7)','rgba(3,4,94,0.7)'];
+  const datasets = hourOrder.map((hr, idx) => ({
+    label: hourLabels[idx],
+    data: weeks.map(w => lookup[w + '_' + hr] || 0),
+    backgroundColor: heatBg[idx],
+    borderColor: heatColors[idx],
+    borderWidth: 0.5,
+    barPercentage: 1.0,
+    categoryPercentage: 0.9,
+  }));
+
+  new Chart(document.getElementById('chart9'), {
+    type: 'bar',
+    data: { labels: weeks, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { maxTicksLimit: 14, callback: function(v,i) { return i%4===0 ? weeks[i] : ''; } } },
+        y: { stacked: true, title: { display:true, text:'Avg kWh (overnight total)' }, beginAtZero:true }
+      },
+      plugins: { legend: { position:'top' } }
+    }
+  });
+}
+
+// ===== CHART 10: Monthly cost breakdown =====
+{
+  const labels = D.cost.monthly.map(m => m.month);
+  new Chart(document.getElementById('chart10'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Heater cost (£)', data: D.cost.monthly.map(m => m.heater_gbp),
+          backgroundColor: CYAN50, borderColor: CYAN, borderWidth: 1 },
+        { label: 'Household cost (£)', data: D.cost.monthly.map(m => m.household_gbp),
+          backgroundColor: GREY50, borderColor: GREY, borderWidth: 1 },
+        { label: 'Heater % of total', data: D.cost.monthly.map(m => m.heater_pct),
+          type: 'line', borderColor: YELLOW, backgroundColor: 'transparent',
+          pointRadius: 4, pointBackgroundColor: YELLOW, yAxisID: 'y1', borderWidth: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, title: { display:true, text:'£ / month' } },
+        y1: { position:'right', title: { display:true, text:'Heater %' }, min:0, max:70, grid:{display:false} }
+      },
+      plugins: { legend: { position:'top' } }
+    }
+  });
+}
+
+}); // end fetch
+</script>
+</body>
+</html>
