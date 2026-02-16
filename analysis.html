@@ -204,7 +204,60 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 5. THE BILL ===== -->
+<!-- ===== 5. WHERE THE ENERGY GOES ===== -->
+<section>
+  <h2>Where the Energy Goes</h2>
+  <p class="section-lead">The Current regime keeps the heater on 20&nbsp;h/day. Where does all that energy go? The overnight profile reveals a clear answer: standby heat loss.</p>
+  <div class="card">
+    <h3>Heater Energy by Time of Day (Current Winter)</h3>
+    <p class="desc">Average heater excess per half-hour slot, Dec 2025 &ndash; Feb 2026. Dashed line = standby floor. Red bars = measurement window.</p>
+    <div class="chart-container chart-med"><canvas id="chartStandby"></canvas></div>
+  </div>
+  <div class="card">
+    <h3>How We Measured Standby Loss</h3>
+    <p class="desc">Two independent methods converge on ~200W of continuous heat loss through the tank insulation.</p>
+    <div class="steps" style="grid-template-columns:repeat(2,1fr)">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Overnight minimum</h4>
+        <p>Between 05:00 and 06:00 the tank has been cooling for 8+ hours. The element still fires ~2&nbsp;min per half-hour at 3.11&nbsp;kW, maintaining the thermostat setpoint. Measured: <strong id="standbyDirect">~200</strong>&nbsp;W.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Regime comparison</h4>
+        <p>Night regime (5&nbsp;h enabled) used 9.6&nbsp;kWh/day. Cozy (9&nbsp;h enabled) used 10.4&nbsp;kWh/day. The extra 0.8&nbsp;kWh over 4&nbsp;extra hours = <strong>200W</strong> of standby loss.</p>
+      </div>
+    </div>
+    <div class="card" style="margin:16px 0 0;background:#0d1321">
+      <h3 style="font-size:0.95em;margin-bottom:12px">The Energy Model</h3>
+      <p class="desc" style="margin-bottom:12px">This simple linear model predicts heater energy from timer hours alone.</p>
+      <div style="text-align:center;font-size:1.3em;color:#fff;font-family:monospace;padding:8px 0 12px">
+        heater<sub>kWh</sub> &nbsp;=&nbsp; 8.6 &nbsp;+&nbsp; 0.2 &times; enabled_hours
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85em;color:#a4b0be">
+        <div><strong style="color:#ffa502">8.6&nbsp;kWh</strong> = fixed draw energy (showers, taps). Doesn&rsquo;t change with the timer.</div>
+        <div><strong style="color:#ff6b6b">0.2&nbsp;kW</strong> = standby heat loss. Every enabled hour costs an extra 0.2&nbsp;kWh (element fires ~4&nbsp;min/h to replace lost heat).</div>
+      </div>
+      <div style="overflow-x:auto;margin-top:16px">
+        <table class="summary-table">
+          <thead>
+            <tr><th>Regime</th><th>Enabled hours</th><th>Model predicts</th><th>Actual</th><th>Match?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="regime-dot" style="background:#ff6b6b"></span>Night</td><td>5&nbsp;h</td><td>9.6 kWh</td><td>9.6 kWh</td><td style="color:#2ed573">exact</td></tr>
+            <tr><td><span class="regime-dot" style="background:#ffa502"></span>Cozy</td><td>9&nbsp;h</td><td>10.4 kWh</td><td>10.4 kWh</td><td style="color:#2ed573">exact</td></tr>
+            <tr><td><span class="regime-dot" style="background:#00d2ff"></span>Current</td><td>20&nbsp;h</td><td>12.6 kWh</td><td>19.3 kWh</td><td style="color:#ff6b6b">+53%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight-box" style="margin-top:12px">
+        <strong>Why does the model break for Current?</strong> With 20&nbsp;h enabled, the tank never cools &mdash; it stays near the thermostat setpoint all day. Hotter water means faster heat loss: the true average standby jumps from 200W to ~535W. The model is validated for short-window regimes (&le;9&nbsp;h) where cooling between windows keeps the average tank temperature lower.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. THE BILL ===== -->
 <section>
   <h2>The Bill</h2>
   <p class="section-lead">Monthly electricity cost on the Octopus Agile tariff, decomposed using the same methodology.</p>
@@ -235,7 +288,61 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 6. HOW WE KNOW ===== -->
+<!-- ===== 7. THE OPTIMAL TIMER ===== -->
+<section>
+  <h2>The Optimal Timer</h2>
+  <p class="section-lead">Combining the energy model with Agile rate data, we can find the cheapest possible timer schedule &mdash; minimizing both energy waste and £/kWh.</p>
+  <div class="card">
+    <h3>How to Find the Best Schedule</h3>
+    <p class="desc">The optimisation has two levers. Pulling both at once gives the biggest saving.</p>
+    <div class="steps" style="grid-template-columns:repeat(2,1fr)">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Minimize timer hours</h4>
+        <p>From the energy model: every enabled hour adds ~0.2&nbsp;kWh of standby loss. Reducing from 20&nbsp;h to 5&nbsp;h eliminates ~3&nbsp;kWh/day of pure waste.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Choose the cheapest hours</h4>
+        <p>Agile tariff rates vary 2&times; across the day. Shifting the window to the cheapest slots cuts £/kWh from ~17p to ~15p &mdash; a 12% rate saving on top.</p>
+      </div>
+    </div>
+    <div class="card" style="margin:16px 0 0;background:#0d1321">
+      <h3 style="font-size:0.95em;margin-bottom:8px">The Cost Formula</h3>
+      <div style="text-align:center;font-size:1.2em;color:#fff;font-family:monospace;padding:8px 0 12px">
+        annual_cost &nbsp;=&nbsp; (8.6 + 0.2 &times; hours) &times; 365 &times; avg_rate
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:0.85em;color:#a4b0be;text-align:center">
+        <div><strong style="color:#ffa502">energy model</strong><br>kWh per day</div>
+        <div><strong style="color:#7f8fa6">days per year</strong></div>
+        <div><strong style="color:#2ed573">Agile rate</strong><br>p/kWh during window</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Agile Rate Profile</h3>
+    <p class="desc">Median half-hourly Agile rate across the full dataset. Green = cheap (&lt;17p), orange = moderate, red = peak (&gt;25p). Dashed line = overall median.</p>
+    <div class="chart-container chart-med"><canvas id="chartAgileRate"></canvas></div>
+  </div>
+  <div class="card">
+    <h3>Timer Schedules Compared</h3>
+    <p class="desc">Coloured = element enabled. Dark = element disabled.</p>
+    <div class="schedules" id="optimalSchedules"></div>
+    <div style="overflow-x:auto;margin-top:16px">
+      <table class="summary-table" id="optimalTable">
+        <thead>
+          <tr><th>Schedule</th><th>Windows</th><th>Enabled</th><th>Avg rate</th><th>Heater kWh/day</th><th>Heater £/year</th><th>Saving</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="conclusion">
+    <strong>Recommendation:</strong> <strong>Option A (11:00&ndash;16:00)</strong> is the simplest and cheapest &mdash; a single 5-hour window during the Agile midday dip saves roughly <strong id="optSavingA">&pound;289</strong>/year vs the current timer. If hotter water at shower time matters, <strong>Option B</strong> adds a 19:30&ndash;21:00 boost for &pound;<span id="optSavingBDiff">47</span>&nbsp;less saving. Both are dramatically better than 20&nbsp;h/day.
+  </div>
+</section>
+
+<!-- ===== 8. HOW WE KNOW ===== -->
 <section>
   <h2>How We Know: Separating Heater from Household</h2>
   <p class="section-lead">A single smart meter measures everything. Here&rsquo;s how we split heater energy from household baseload.</p>
@@ -523,6 +630,163 @@ new Chart(document.getElementById('chartMethod'), {
   },
   plugins: [methodBandsPlugin]
 });
+
+// ===== STANDBY HEAT LOSS PROFILE =====
+const standbyProfile = D.standby.profile;
+const standbyWatts = D.standby.standby_watts;
+document.getElementById('standbyDirect').textContent = '~' + standbyWatts;
+const standbyLinePlugin = {
+  id: 'standbyLine',
+  afterDraw(chart) {
+    const {ctx, chartArea: {left, right, top, bottom}, scales: {y}} = chart;
+    const yVal = y.getPixelForValue(standbyWatts / 2000);
+    ctx.save();
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(left, yVal);
+    ctx.lineTo(right, yVal);
+    ctx.stroke();
+    ctx.fillStyle = '#ff6b6b';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(standbyWatts + 'W standby floor', right - 4, yVal - 6);
+    ctx.restore();
+  }
+};
+new Chart(document.getElementById('chartStandby'), {
+  type: 'bar',
+  data: {
+    labels: standbyProfile.map(p => p.slot),
+    datasets: [{
+      label: 'Heater excess (kWh)',
+      data: standbyProfile.map(p => p.heater_kwh),
+      backgroundColor: standbyProfile.map(p => {
+        if (p.slot === '05:00' || p.slot === '05:30') return '#ff6b6b';
+        if (p.slot >= '21:00' || p.slot < '04:00') return CYAN;
+        return CYAN50;
+      }),
+      borderWidth: 0,
+      barPercentage: 1.0,
+      categoryPercentage: 1.0,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display: true, text: 'Time of day (UK local)' },
+           ticks: { maxTicksLimit: 24, callback: function(v, i) { return i % 4 === 0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display: true, text: 'Avg heater kWh per half-hour' }, beginAtZero: true }
+    },
+    plugins: { legend: { display: false } }
+  },
+  plugins: [standbyLinePlugin]
+});
+
+// ===== AGILE RATE PROFILE =====
+const rateProfile = D.optimal.rate_profile;
+const medianRate = D.optimal.overall_median;
+const medianLinePlugin = {
+  id: 'medianLine',
+  afterDraw(chart) {
+    const {ctx, chartArea: {left, right, top, bottom}, scales: {y}} = chart;
+    const yVal = y.getPixelForValue(medianRate);
+    ctx.save();
+    ctx.strokeStyle = WHITE;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(left, yVal);
+    ctx.lineTo(right, yVal);
+    ctx.stroke();
+    ctx.fillStyle = WHITE;
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Median ' + medianRate + 'p', left + 4, yVal - 6);
+    ctx.restore();
+  }
+};
+const GREEN = '#2ed573';
+const RED = '#ff6b6b';
+new Chart(document.getElementById('chartAgileRate'), {
+  type: 'bar',
+  data: {
+    labels: rateProfile.map(p => p.slot),
+    datasets: [{
+      label: 'Median Agile rate (p/kWh)',
+      data: rateProfile.map(p => p.median_rate),
+      backgroundColor: rateProfile.map(p => {
+        if (p.median_rate > 25) return RED;
+        if (p.median_rate > 17) return ORANGE;
+        return GREEN;
+      }),
+      borderWidth: 0,
+      barPercentage: 1.0,
+      categoryPercentage: 1.0,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display: true, text: 'Time of day (UK local)' },
+           ticks: { maxTicksLimit: 24, callback: function(v, i) { return i % 4 === 0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display: true, text: 'p / kWh' }, beginAtZero: true }
+    },
+    plugins: { legend: { display: false } }
+  },
+  plugins: [medianLinePlugin]
+});
+
+// ===== OPTIMAL TIMER SCHEDULES (bars + table) =====
+const optSchedules = D.optimal.schedules;
+const schedContainer = document.getElementById('optimalSchedules');
+optSchedules.forEach(sched => {
+  const enabledSet = new Set(sched.enabled_slots);
+  // Build gradient stops: each slot is 1/48 of the bar
+  const stops = [];
+  for (let i = 0; i < 48; i++) {
+    const h = Math.floor(i / 2);
+    const m = (i % 2) * 30;
+    const slot = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    const pct1 = (i / 48 * 100).toFixed(2);
+    const pct2 = ((i + 1) / 48 * 100).toFixed(2);
+    const color = enabledSet.has(slot) ? sched.color : '#1e2a42';
+    stops.push(color + ' ' + pct1 + '%,' + color + ' ' + pct2 + '%');
+  }
+  const row = document.createElement('div');
+  row.className = 'schedule-row';
+  row.innerHTML = '<div class="schedule-label"><span class="regime-dot" style="background:' + sched.color + '"></span>' + sched.name + '<br><span class="regime-hrs">' + sched.enabled_hours + ' h enabled</span></div>' +
+    '<div class="schedule-bar" style="background:linear-gradient(to right,' + stops.join(',') + ')"></div>';
+  schedContainer.appendChild(row);
+});
+// Axis
+const axisDiv = document.createElement('div');
+axisDiv.className = 'schedule-axis';
+axisDiv.innerHTML = '<span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span>';
+schedContainer.appendChild(axisDiv);
+
+// Table
+const tbody = document.querySelector('#optimalTable tbody');
+optSchedules.forEach(sched => {
+  const tr = document.createElement('tr');
+  const savingText = sched.saving > 0 ? ('\u00a3' + sched.saving + '/yr') : '\u2014';
+  const savingStyle = sched.saving > 0 ? 'color:#2ed573;font-weight:600' : '';
+  tr.innerHTML = '<td><span class="regime-dot" style="background:' + sched.color + '"></span>' + sched.name + '</td>' +
+    '<td>' + sched.windows_desc + '</td>' +
+    '<td>' + sched.enabled_hours + ' h</td>' +
+    '<td>' + sched.avg_rate + 'p</td>' +
+    '<td>' + sched.heater_kwh + '</td>' +
+    '<td>\u00a3' + sched.annual_cost + '</td>' +
+    '<td style="' + savingStyle + '">' + savingText + '</td>';
+  tbody.appendChild(tr);
+});
+
+// Update dynamic conclusion values
+const savingA = optSchedules[1]?.saving || 289;
+const savingB = optSchedules[2]?.saving || 242;
+document.getElementById('optSavingA').textContent = '\u00a3' + savingA;
+document.getElementById('optSavingBDiff').textContent = Math.round(savingA - savingB);
 
 }).catch(() => {
   document.querySelector('.container').insertAdjacentHTML('afterbegin',

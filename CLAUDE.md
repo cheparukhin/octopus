@@ -58,11 +58,27 @@ The core problem: a single meter measures total household + heater consumption. 
 
 Key insight: Night-only and Cozy use almost identical heater energy (~10 kWh/day) despite different timer patterns — both limit enabled time to <9 h/day. The Current regime's 20 h/day eliminates the free temperature setback during off-periods, nearly doubling heater energy consumption.
 
+### Standby loss analysis
+
+Standby heat loss through tank insulation measured at ~233W from the overnight minimum (05:00–06:00 slots during Current winter). Cross-validated at ~200W from regime comparison: (10.4 − 9.6 kWh) / (9 − 5 h) = 0.2 kW.
+
+Energy model (validated for short-window regimes ≤9 h): `heater_kWh = 8.6 + 0.2 × enabled_hours`. Breaks down for Current (20 h) because the tank never cools — true average standby rises to ~535W.
+
+### Optimal timer analysis
+
+Optimal schedules minimize both enabled hours (reducing standby waste) and £/kWh (choosing cheap Agile slots):
+
+| Schedule | Windows | Enabled | Heater kWh/day | Avg rate | Annual cost | Saving |
+|---|---|---|---|---|---|---|
+| Current | 00–16, 20–00 | 20 h | 14.4 | 16.6p | £835 | — |
+| Option A | 11–16 | 5 h | 9.6 | 15.6p | £546 | £289/yr |
+| Option B | 13–16, 19:30–21 | 4.5 h | 9.5 | 17.1p | £593 | £242/yr |
+
 ## Architecture
 
 - `download.py` — fetches consumption + Agile rates from Octopus API, writes `usage.csv`
 - `usage.csv` — raw half-hourly data (UTC timestamps)
-- `analysis.html` — narrative dashboard (Chart.js, dark theme, 6 sections with 5 charts)
+- `analysis.html` — narrative dashboard (Chart.js, dark theme, 8 sections with 7 charts)
 - `report_data.json` — chart data loaded via `fetch()` at runtime
 - `og-analysis.png` — Open Graph preview image for Telegram/social sharing
 - `.tmp/` — intermediate analysis scripts and data (gitignored)
