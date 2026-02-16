@@ -61,6 +61,15 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
 .summary-table tr:hover td{background:#1a2235}
 .summary-table .regime-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:middle}
 
+/* Timer schedules */
+.schedules{margin:0 0 8px}
+.schedule-row{display:flex;align-items:center;margin-bottom:8px;gap:14px}
+.schedule-label{width:150px;flex-shrink:0;font-size:0.82em;line-height:1.4}
+.schedule-label .regime-hrs{color:#7f8fa6;font-size:0.9em}
+.schedule-bar{flex:1;height:26px;border-radius:5px}
+.schedule-axis{display:flex;margin-left:164px;margin-top:2px}
+.schedule-axis span{flex:1;font-size:0.7em;color:#4a5568}
+
 /* Methodology steps */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:24px 0}
 .step{background:#0d1321;border-radius:12px;padding:24px 20px;border:1px solid #1e2a42;position:relative}
@@ -90,6 +99,9 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   .cost-summary{grid-template-columns:1fr}
   .hero h1{font-size:1.8em}
   .stat .num{font-size:2em}
+  .schedule-label{width:120px}
+  .schedule-axis{margin-left:134px}
+  .schedule-bar{height:22px}
 }
 @media(max-width:500px){
   .stats{grid-template-columns:1fr}
@@ -124,10 +136,27 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
-<!-- ===== 3. THREE TIMER REGIMES ===== -->
+<!-- ===== 3. TWO TIMER REGIMES ===== -->
 <section>
-  <h2>Three Timer Regimes</h2>
-  <p class="section-lead">Each regime has a distinctive half-hourly &ldquo;fingerprint&rdquo;. Night-only concentrates in one evening window; Cozy splits across three dip windows; Current spreads energy use across almost the entire day.</p>
+  <h2>Two Timer Regimes</h2>
+  <p class="section-lead">In April 2025 the heater switched to the &ldquo;Cozy&rdquo; 3-window timer. In late August it changed again to a near-continuous schedule. The March period used an uncertain timer configuration and is excluded from the comparison.</p>
+  <div class="card">
+    <h3>Timer Schedules</h3>
+    <p class="desc">Coloured = element enabled. Dark = element disabled by timer.</p>
+    <div class="schedules">
+      <div class="schedule-row">
+        <div class="schedule-label"><span class="regime-dot" style="background:#ffa502"></span>Cozy 3-window<br><span class="regime-hrs">~8 h enabled</span></div>
+        <div class="schedule-bar" style="background:linear-gradient(to right,#1e2a42 0%,#1e2a42 16.67%,#ffa502 16.67%,#ffa502 29.17%,#1e2a42 29.17%,#1e2a42 54.17%,#ffa502 54.17%,#ffa502 66.67%,#1e2a42 66.67%,#1e2a42 91.67%,#ffa502 91.67%,#ffa502 100%)"></div>
+      </div>
+      <div class="schedule-row">
+        <div class="schedule-label"><span class="regime-dot" style="background:#00d2ff"></span>Current<br><span class="regime-hrs">~20 h enabled</span></div>
+        <div class="schedule-bar" style="background:linear-gradient(to right,#00d2ff 0%,#00d2ff 66.67%,#1e2a42 66.67%,#1e2a42 83.33%,#00d2ff 83.33%,#00d2ff 100%)"></div>
+      </div>
+      <div class="schedule-axis">
+        <span>00</span><span>03</span><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span>
+      </div>
+    </div>
+  </div>
   <div class="card">
     <h3>Half-Hourly Consumption Profile</h3>
     <p class="desc">Average kWh per half-hour slot across the day (UK local time).</p>
@@ -141,16 +170,12 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
         </thead>
         <tbody>
           <tr>
-            <td><span class="regime-dot" style="background:#ff6b6b"></span>Night-only (Mar)</td>
-            <td>~5 h/day</td><td>9.6</td><td>3.1</td><td>5.5</td><td>15.1</td>
-          </tr>
-          <tr>
             <td><span class="regime-dot" style="background:#ffa502"></span>Cozy 3-window (May&ndash;Jun)</td>
-            <td>~9 h/day</td><td>10.4</td><td>3.4</td><td>5.7</td><td>16.1</td>
+            <td>~8 h/day</td><td>10.4</td><td>3.4</td><td>5.7</td><td>16.1</td>
           </tr>
           <tr>
             <td><span class="regime-dot" style="background:#7f8fa6"></span>Summer (Jul&ndash;Aug)</td>
-            <td>~9 h/day</td><td>8.9</td><td>2.9</td><td>5.7</td><td>14.6</td>
+            <td>~8 h/day</td><td>8.9</td><td>2.9</td><td>5.7</td><td>14.6</td>
           </tr>
           <tr>
             <td><span class="regime-dot" style="background:#00d2ff"></span>Current winter (Dec&ndash;Feb)</td>
@@ -160,57 +185,26 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
       </table>
     </div>
     <div class="insight-box">
-      <strong>Night-only and Cozy use almost identical heater energy</strong> (~10 kWh/day) despite very different timer patterns &mdash; both limit enabled time to &lt;9 h/day. The Current regime nearly doubles it.
+      <strong>Cozy uses ~10 kWh/day of heater energy</strong> despite 8 hours of enabled time &mdash; the thermostat limits actual run-time to ~3.4 h/day. The Current regime&rsquo;s 20-hour window nearly doubles both enabled and actual run-time.
     </div>
   </div>
 </section>
 
-<!-- ===== 4. METHODOLOGY ===== -->
-<section>
-  <h2>How We Know: Separating Heater from Household</h2>
-  <p class="section-lead">A single smart meter measures everything. Here&rsquo;s how we split heater energy from household baseload.</p>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <h4>The problem</h4>
-      <p>One meter measures the 3.11&nbsp;kW immersion heater and all household appliances together. We need to decompose every half-hour reading into heater vs household.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <h4>The trick</h4>
-      <p>Each timer regime has hours when the heater is guaranteed OFF. We measure household-only consumption during these &ldquo;clean windows&rdquo; to build a time-of-day baseline (130&nbsp;W overnight to 450&nbsp;W at the evening peak).</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <h4>The result</h4>
-      <p>Subtract the hourly baseline from each reading and cap at 1.555&nbsp;kWh (element max per slot). The household baseline stays flat at ~5.5&ndash;7&nbsp;kWh/day across all regimes, confirming the split works.</p>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Monthly Decomposition</h3>
-    <p class="desc">Household load (grey) is stable year-round. The entire swing comes from the heater (cyan).</p>
-    <div class="chart-container chart-med"><canvas id="chartMonthly"></canvas></div>
-  </div>
-  <div class="insight-box" style="margin-top:-12px">
-    <strong>Why not simpler methods?</strong> A flat threshold (&gt;0.8&nbsp;kWh = heater) over-attributes household baseline to the heater, yielding a false element power of 2.83&nbsp;kW instead of the measured 3.11&nbsp;kW. A fixed baseline catches cooking/kettle spikes as &ldquo;heater&rdquo; energy. Only regime-specific clean windows give a stable, validated split.
-  </div>
-</section>
-
-<!-- ===== 5. WHY MORE TIMER HOURS = MORE ENERGY ===== -->
+<!-- ===== 4. WHY MORE TIMER HOURS = MORE ENERGY ===== -->
 <section>
   <h2>Why More Timer Hours = More Energy</h2>
-  <p class="section-lead">The distribution of half-hourly readings tells the story: under Night-only, most slots are idle. Under Current, almost nothing is.</p>
+  <p class="section-lead">The distribution of half-hourly readings tells the story: under Cozy, most slots are idle. Under Current, almost nothing is.</p>
   <div class="card">
     <h3>Distribution of Half-Hourly Readings</h3>
-    <p class="desc">Each bin is 0.1 kWh wide. One representative month per regime.</p>
+    <p class="desc">Smoothed density of readings (0.1 kWh bins). One representative month per regime.</p>
     <div class="chart-container chart-tall"><canvas id="chartDist"></canvas></div>
     <div class="insight-box">
-      <strong>The physics:</strong> longer timer keeps the tank hot &rarr; higher average temperature &rarr; higher standing heat loss &rarr; element runs more to compensate. Night-only and Cozy both limit enabled time to &lt;9&nbsp;h/day, letting the tank cool freely between windows. The Current regime&rsquo;s 20&nbsp;h/day eliminates this free temperature setback &mdash; every dip is immediately corrected.
+      <strong>The physics:</strong> longer timer keeps the tank hot &rarr; higher average temperature &rarr; higher standing heat loss &rarr; element runs more to compensate. Cozy limits enabled time to 8&nbsp;h/day, letting the tank cool freely between windows. The Current regime&rsquo;s 20&nbsp;h/day eliminates this free temperature setback &mdash; every dip is immediately corrected.
     </div>
   </div>
 </section>
 
-<!-- ===== 6. THE BILL ===== -->
+<!-- ===== 5. THE BILL ===== -->
 <section>
   <h2>The Bill</h2>
   <p class="section-lead">Monthly electricity cost on the Octopus Agile tariff, decomposed using the same methodology.</p>
@@ -241,6 +235,42 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
 </section>
 
+<!-- ===== 6. HOW WE KNOW ===== -->
+<section>
+  <h2>How We Know: Separating Heater from Household</h2>
+  <p class="section-lead">A single smart meter measures everything. Here&rsquo;s how we split heater energy from household baseload.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h4>The problem</h4>
+      <p>One meter measures the 3.11&nbsp;kW immersion heater and all household appliances together. We need to decompose every half-hour reading into heater vs household.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h4>The trick</h4>
+      <p>Each timer regime has hours when the heater is guaranteed OFF. We measure household-only consumption during these &ldquo;clean windows&rdquo; to build a time-of-day baseline (130&nbsp;W overnight to 450&nbsp;W at the evening peak).</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h4>The result</h4>
+      <p>Subtract the hourly baseline from each reading and cap at 1.555&nbsp;kWh (element max per slot). The household baseline stays flat at ~5.5&ndash;7&nbsp;kWh/day across all regimes, confirming the split works.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Illustrated: Cozy Regime</h3>
+    <p class="desc">The three timer windows (04&ndash;07, 13&ndash;16, 22&ndash;00) leave two clean gaps (green bands) where readings are guaranteed household-only &mdash; giving us the baseline to subtract everywhere else.</p>
+    <div class="chart-container chart-med"><canvas id="chartMethod"></canvas></div>
+  </div>
+  <div class="card">
+    <h3>Monthly Decomposition</h3>
+    <p class="desc">Household load (grey) is stable year-round. The entire swing comes from the heater (cyan).</p>
+    <div class="chart-container chart-med"><canvas id="chartMonthly"></canvas></div>
+  </div>
+  <div class="insight-box" style="margin-top:-12px">
+    <strong>Why not simpler methods?</strong> A flat threshold (&gt;0.8&nbsp;kWh = heater) over-attributes household baseline to the heater, yielding a false element power of 2.83&nbsp;kW instead of the measured 3.11&nbsp;kW. A fixed baseline catches cooking/kettle spikes as &ldquo;heater&rdquo; energy. Only regime-specific clean windows give a stable, validated split.
+  </div>
+</section>
+
 <div class="footer">
   Analysis of Octopus Energy smart meter data &middot; Mar 2025 &ndash; Feb 2026 &middot; <a href="https://github.com/cheparukhin/octopus">Source</a>
 </div>
@@ -256,10 +286,7 @@ const CYAN = '#00d2ff';
 const CYAN50 = 'rgba(0,210,255,0.5)';
 const GREY = '#7f8fa6';
 const GREY50 = 'rgba(127,143,166,0.5)';
-const RED = '#ff6b6b';
-const RED50 = 'rgba(255,107,107,0.5)';
 const ORANGE = '#ffa502';
-const ORANGE50 = 'rgba(255,165,2,0.5)';
 const YELLOW = '#ffd32a';
 const WHITE = '#ffffff';
 const GRID = 'rgba(255,255,255,0.06)';
@@ -340,10 +367,8 @@ new Chart(document.getElementById('chartTimeline'), {
 new Chart(document.getElementById('chartProfiles'), {
   type: 'line',
   data: {
-    labels: D.profiles.night.map(p => p.slot),
+    labels: D.profiles.cozy.map(p => p.slot),
     datasets: [
-      { label: 'Night-only (Mar 2025)', data: D.profiles.night.map(p => p.mean),
-        borderColor: RED, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: 0 },
       { label: 'Cozy 3-window (May\u2013Jun 2025)', data: D.profiles.cozy.map(p => p.mean),
         borderColor: ORANGE, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: 0 },
       { label: 'Summer (Jul\u2013Aug 2025)', data: D.profiles.summer.map(p => p.mean),
@@ -386,20 +411,21 @@ new Chart(document.getElementById('chartMonthly'), {
   }
 });
 
-// ===== DISTRIBUTION =====
+// ===== DISTRIBUTION (smooth area curves) =====
 const distStyle = {
-  'Mar 2025 (night)':   { bg: RED50,    border: RED    },
-  'May 2025 (cozy)':    { bg: ORANGE50, border: ORANGE },
-  'Jan 2026 (current)': { bg: CYAN50,   border: CYAN   },
+  'May 2025 (cozy)':    { bg: 'rgba(255,165,2,0.15)',   border: ORANGE },
+  'Jan 2026 (current)': { bg: 'rgba(0,210,255,0.15)',   border: CYAN   },
 };
+const distKeys = ['Jan 2026 (current)', 'May 2025 (cozy)'];
 new Chart(document.getElementById('chartDist'), {
-  type: 'bar',
+  type: 'line',
   data: {
     labels: D.dist_labels,
-    datasets: Object.keys(D.distributions).map(k => ({
+    datasets: distKeys.map(k => ({
       label: k, data: D.distributions[k],
-      backgroundColor: (distStyle[k] || {}).bg || GREY50,
-      borderColor: (distStyle[k] || {}).border || GREY, borderWidth: 1
+      backgroundColor: distStyle[k].bg,
+      borderColor: distStyle[k].border, borderWidth: 2,
+      fill: true, tension: 0.4, pointRadius: 0
     }))
   },
   options: {
@@ -409,6 +435,7 @@ new Chart(document.getElementById('chartDist'), {
            ticks: { maxTicksLimit: 18, callback: function(v, i) { return i % 3 === 0 ? this.getLabelForValue(v) : ''; } } },
       y: { title: { display: true, text: 'Number of readings' } }
     },
+    interaction: { intersect: false, mode: 'index' },
     plugins: { legend: { position: 'top' } }
   }
 });
@@ -437,6 +464,64 @@ new Chart(document.getElementById('chartCost'), {
     },
     plugins: { legend: { position: 'top' } }
   }
+});
+
+// ===== METHODOLOGY ILLUSTRATION (Cozy regime) =====
+const methodBandsPlugin = {
+  id: 'methodBands',
+  beforeDraw(chart) {
+    const {ctx, chartArea: {left, right, top, bottom}, scales: {x}} = chart;
+    // Cozy clean windows: 07:00-13:00 (indices 14-25) and 16:00-22:00 (indices 32-43)
+    const windows = [[14, 25, '07:00\u201313:00'], [32, 43, '16:00\u201322:00']];
+    windows.forEach(([start, end, label]) => {
+      const x1 = x.getPixelForValue(start);
+      const x2 = x.getPixelForValue(end);
+      ctx.save();
+      ctx.fillStyle = 'rgba(46,213,115,0.08)';
+      ctx.fillRect(x1, top, x2 - x1, bottom - top);
+      ctx.fillStyle = 'rgba(46,213,115,0.55)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Timer OFF \u2192 baseline', (x1 + x2) / 2, top + 15);
+      // Dashed borders
+      [x1, x2].forEach(xp => {
+        ctx.strokeStyle = 'rgba(46,213,115,0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(xp, top);
+        ctx.lineTo(xp, bottom);
+        ctx.stroke();
+      });
+      ctx.restore();
+    });
+  }
+};
+new Chart(document.getElementById('chartMethod'), {
+  type: 'line',
+  data: {
+    labels: D.profiles.cozy.map(p => p.slot),
+    datasets: [{
+      label: 'Cozy avg consumption',
+      data: D.profiles.cozy.map(p => p.mean),
+      borderColor: ORANGE,
+      backgroundColor: 'rgba(255,165,2,0.15)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { title: { display: true, text: 'Time of day (UK local)' },
+           ticks: { maxTicksLimit: 24, callback: function(v, i) { return i % 4 === 0 ? this.getLabelForValue(v) : ''; } } },
+      y: { title: { display: true, text: 'Avg kWh per half-hour' }, beginAtZero: true }
+    },
+    plugins: { legend: { display: false } }
+  },
+  plugins: [methodBandsPlugin]
 });
 
 }).catch(() => {
