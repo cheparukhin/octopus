@@ -62,11 +62,9 @@ Key insight: Night-only and Cozy use almost identical heater energy (~10 kWh/day
 
 - `download.py` — fetches consumption + Agile rates from Octopus API, writes `usage.csv`
 - `usage.csv` — raw half-hourly data (UTC timestamps)
-- `analysis.html` — self-contained dashboard (inline Chart.js, inline JSON data, dark theme)
-- `report_data.json` — full chart data (same as inline, kept for reference)
+- `analysis.html` — narrative dashboard (Chart.js, dark theme, 6 sections with 5 charts)
+- `report_data.json` — chart data loaded via `fetch()` at runtime
 - `og-analysis.png` — Open Graph preview image for Telegram/social sharing
 - `.tmp/` — intermediate analysis scripts and data (gitignored)
-
-All chart data is inlined directly into `analysis.html` (no fetch) to avoid CORS issues when opening from `file://`.
 
 Hosted on GitHub Pages: https://cheparukhin.github.io/octopus/analysis.html
