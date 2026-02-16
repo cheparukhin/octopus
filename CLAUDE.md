@@ -7,10 +7,12 @@ Single-page HTML dashboard (`analysis.html`) analysing why an immersion heater u
 ## Key facts
 
 - **Element power**: 3.11 kW (measured with a power meter). Max energy per 30-min slot = 1.555 kWh.
-- **Timer regimes**:
-  - OLD (Mar–May 2025): element enabled ~6 h/day in cheap overnight windows.
-  - NEW (Jun 2025 onward): element enabled ~20 h/day, off only 16:00–20:00.
-- **Regime change date**: approximately 2025-06-02 (identified from data — daytime heater firing >10% starts that week).
+- **Timer regimes** (3 identified from data, all times UK local):
+  - **Night-only** (Mar 1 – ~Apr 9, 2025): element enabled ~5 h/day in a single evening window (~19:00–23:00 local). Heater on ~3.1 h/day.
+  - **Cozy 3-window** (~Apr 10 – ~Aug 25, 2025): element enabled ~9 h/day across three dip windows (04:00–07:00, 13:00–16:00, 22:00–00:00 local). Heater on ~3.4 h/day.
+  - **Current** (~Aug 26, 2025 onward): element enabled ~20 h/day, off only 16:00–20:00 local. Heater on ~6.2 h/day in winter.
+- **Transition dates**: Night→Cozy ~Apr 10 (sharp jump in daytime firing), Cozy→Current ~Aug 26 (7-day average jumps ~6 kWh/day overnight).
+- **DST**: UK clocks forward 2025-03-30, back 2025-10-26. CSV timestamps are UTC; timer operates in local time. All analysis converts UTC→Europe/London.
 - **February 2025 excluded**: meter was newly installed / property unoccupied. Readings are anomalously low (24W floor vs 110W+ in March).
 
 ## Decomposition methodology
@@ -27,11 +29,12 @@ The core problem: a single meter measures total household + heater consumption. 
 
 ### Correct approach: time-varying baseline from regime-specific clean windows
 
-1. **Identify truly clean windows per regime**:
-   - OLD regime: hours 08:00, 09:00 (heater firing <2%)
-   - NEW regime: hours 16:00–19:30 (heater explicitly OFF by timer)
+1. **Identify truly clean windows per regime** (hours where heater is guaranteed OFF by timer):
+   - Night-only: local hours 07:00–18:00 (daytime, heater off)
+   - Cozy: local hours 07:00–12:00 and 16:00–21:00 (between dip windows)
+   - Current: local hours 16:00–19:00 (heater explicitly OFF by timer)
 
-2. **Build per-hour-of-day baseline**: median of readings < 0.5 kWh at clean hours. Missing hours filled by circular linear interpolation. Result: 130W (06:00, overnight minimum) to 450W (19:00, evening peak).
+2. **Build per-half-hour-of-day baseline**: collect readings from all regime-specific clean windows, take median of readings < 0.5 kWh at each half-hour slot. Missing slots filled by circular linear interpolation. Result: 130W (06:00, overnight minimum) to 450W (19:00, evening peak).
 
 3. **Decompose each slot**: `heater_excess = max(0, reading - baseline[hour])`, capped at 1.555 kWh. Remainder = household.
 
@@ -39,16 +42,21 @@ The core problem: a single meter measures total household + heater consumption. 
 
 ### Results
 
+| Regime | Total kWh/day | Heater kWh/day | Household kWh/day | On-time h/day |
+|---|---|---|---|---|
+| Night-only (Mar) | 15.1 | 9.6 | 5.5 | 3.1 |
+| Cozy (May–Jun) | 16.1 | 10.4 | 5.7 | 3.4 |
+| Summer (Jul–Aug) | 14.6 | 8.9 | 5.7 | 2.9 |
+| Current winter (Dec–Feb) | 26.3 | 19.3 | 7.0 | 6.2 |
+
 | Metric | Value |
 |---|---|
-| Gap (new − old avg) | +5.4 kWh/day |
-| Heater share of gap | 86% |
-| Seasonal household share | 14% |
-| Extra cost per year | £277 |
-| Old regime run-time | 3.5 h/day |
-| New regime winter run-time | 6.3 h/day |
+| Gap (current winter − cozy) | +10.2 kWh/day |
+| Heater share of gap | 87% (+8.9 kWh/day) |
+| Seasonal household share | 13% (+1.3 kWh/day) |
+| Estimated extra cost per year | ~£275 |
 
-The heater uses more energy because the new regime keeps the tank at setpoint ~20 h/day (vs ~6 h/day), eliminating free temperature setback during off-periods and increasing standing heat losses.
+Key insight: Night-only and Cozy use almost identical heater energy (~10 kWh/day) despite different timer patterns — both limit enabled time to <9 h/day. The Current regime's 20 h/day eliminates the free temperature setback during off-periods, nearly doubling heater energy consumption.
 
 ## Architecture
 
