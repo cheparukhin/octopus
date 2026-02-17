@@ -37,3 +37,36 @@ Edit constants at the top of `download.py`:
 - `MPAN` / `SERIAL` — your meter identifiers (find via [account API](https://developer.octopus.energy/rest/guides/))
 - `PRODUCT` — your Agile product code
 - `SINCE` — earliest date to fetch from
+
+## Heater schedule optimization (21:00-00:00 demand)
+
+`optimize_heater_milp.py` builds a deterministic thermal-storage model and solves it with SciPy/HiGHS MILP.
+
+Run with defaults:
+
+```bash
+uv run python optimize_heater_milp.py
+```
+
+Useful options:
+
+```bash
+# Capacity sensitivity
+uv run python optimize_heater_milp.py --capacity-grid 6,7,8,9,10
+
+# Demand and practicality controls
+uv run python optimize_heater_milp.py \
+  --evening-demand-kwh 10 \
+  --max-windows 2 \
+  --switch-penalty-p 2.0
+```
+
+Estimate tank usable capacity from one cool-down/reheat experiment:
+
+```bash
+uv run python optimize_heater_milp.py \
+  --estimate-capacity \
+  --off-hours 12 \
+  --reheat-kwh 2.2 \
+  --standby-kw 0.233
+```

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Why Is My Heater Using 2x The Energy?</title>
 <meta property="og:title" content="Why Is My Heater Using 2x The Energy?">
-<meta property="og:description" content="Deep-dive analysis of 18,240 half-hourly readings across 3 timer regimes. The 3.11 kW element runs 6.2 h/day under the current timer vs 3.4 h/day under Cozy.">
+<meta property="og:description" content="Deep-dive analysis of 16,896 half-hourly readings across 3 timer regimes. The current timer materially increases heater runtime and cost versus short-window schedules.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://cheparukhin.github.io/octopus/analysis.html">
 <meta property="og:image" content="https://cheparukhin.github.io/octopus/og-analysis.png">
@@ -115,12 +115,12 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
 <!-- ===== 1. HERO ===== -->
 <div class="hero">
   <h1>Why Is My Heater Using 2&times; The Energy?</h1>
-  <p class="lead">Analysing 18,240 half-hourly smart meter readings across 12 months and 3 timer regimes on the Octopus Agile tariff.</p>
+  <p class="lead">Analysing 16,896 half-hourly smart meter readings (352 days) across 3 timer regimes on the Octopus Agile tariff.</p>
   <div class="stats">
-    <div class="stat"><div class="num">+87%</div><div class="label">of the increase is the timer</div></div>
-    <div class="stat"><div class="num">6.2 h</div><div class="label">element run-time per day (was&nbsp;3.4)</div></div>
-    <div class="stat"><div class="num">~&pound;289</div><div class="label">saveable per year</div></div>
-    <div class="stat"><div class="num">19.3</div><div class="label">heater kWh/day (was&nbsp;10.4)</div></div>
+    <div class="stat"><div class="num" id="heroHeaterShare">--</div><div class="label">heater share of regime gap</div></div>
+    <div class="stat"><div class="num" id="heroOnHours">--</div><div class="label">element run-time per day (Current winter vs Cozy)</div></div>
+    <div class="stat"><div class="num" id="heroSaving">--</div><div class="label">saveable per year (best schedule)</div></div>
+    <div class="stat"><div class="num" id="heroHeater">--</div><div class="label">heater kWh/day (Current winter vs Cozy)</div></div>
   </div>
 </div>
 
@@ -131,7 +131,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   <div class="card">
     <div class="chart-container chart-tall"><canvas id="chartTimeline"></canvas></div>
     <div class="insight-box">
-      <strong>August 26:</strong> the 7-day average jumps ~6 kWh/day overnight when the timer switches to the Current regime (on 20 h/day). Daily totals nearly double and stay elevated through winter.
+      <strong>August 26:</strong> the 7-day average jumps immediately and then rises sharply over the following week when the timer switches to the Current regime (on 20 h/day). Daily totals stay elevated through winter.
     </div>
   </div>
 </section>
@@ -171,21 +171,21 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
         <tbody>
           <tr>
             <td><span class="regime-dot" style="background:#ffa502"></span>Cozy 3-window (May&ndash;Jun)</td>
-            <td>~8 h/day</td><td>10.4</td><td>3.4</td><td>5.7</td><td>16.1</td>
+            <td>~8 h/day</td><td id="tblCozyHeater">--</td><td id="tblCozyOn">--</td><td id="tblCozyOther">--</td><td id="tblCozyTotal">--</td>
           </tr>
           <tr>
             <td><span class="regime-dot" style="background:#7f8fa6"></span>Summer (Jul&ndash;Aug)</td>
-            <td>~8 h/day</td><td>8.9</td><td>2.9</td><td>5.7</td><td>14.6</td>
+            <td>~8 h/day</td><td id="tblSummerHeater">--</td><td id="tblSummerOn">--</td><td id="tblSummerOther">--</td><td id="tblSummerTotal">--</td>
           </tr>
           <tr>
             <td><span class="regime-dot" style="background:#00d2ff"></span>Current winter (Dec&ndash;Feb)</td>
-            <td>~20 h/day</td><td>19.3</td><td>6.2</td><td>7.0</td><td>26.3</td>
+            <td>~20 h/day</td><td id="tblWinterHeater">--</td><td id="tblWinterOn">--</td><td id="tblWinterOther">--</td><td id="tblWinterTotal">--</td>
           </tr>
         </tbody>
       </table>
     </div>
     <div class="insight-box">
-      <strong>Cozy uses ~10 kWh/day of heater energy</strong> despite 8 hours of enabled time &mdash; the thermostat limits actual run-time to ~3.4 h/day. The Current regime&rsquo;s 20-hour window nearly doubles both enabled and actual run-time.
+      <strong id="regimeInsightHeadline">Short windows reduce heater runtime materially.</strong> The Current regime&rsquo;s 20-hour window substantially increases both enabled and actual run-time compared with Cozy.
     </div>
   </div>
 </section>
@@ -222,12 +222,12 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
       <div class="step">
         <div class="step-num">2</div>
         <h4>Regime comparison</h4>
-        <p>Night regime (5&nbsp;h enabled) used 9.6&nbsp;kWh/day. Cozy (9&nbsp;h enabled) used 10.4&nbsp;kWh/day. The extra 0.8&nbsp;kWh over 4&nbsp;extra hours = <strong>200W</strong> of standby loss.</p>
+        <p>Night regime (5&nbsp;h enabled) used 9.6&nbsp;kWh/day. Cozy (8&nbsp;h enabled) is ~10.2&nbsp;kWh/day in the linear model. The extra 0.6&nbsp;kWh over 3&nbsp;extra hours = <strong>~200W</strong> of standby loss.</p>
       </div>
     </div>
     <div class="card" style="margin:16px 0 0;background:#0d1321">
       <h3 style="font-size:0.95em;margin-bottom:12px">The Energy Model</h3>
-      <p class="desc" style="margin-bottom:12px">This simple linear model predicts heater energy from timer hours alone.</p>
+      <p class="desc" style="margin-bottom:12px">This simple linear model is a first-order approximation of heater energy from timer hours.</p>
       <div style="text-align:center;font-size:1.3em;color:#fff;font-family:monospace;padding:8px 0 12px">
         heater<sub>kWh</sub> &nbsp;=&nbsp; 8.6 &nbsp;+&nbsp; 0.2 &times; enabled_hours
       </div>
@@ -242,13 +242,13 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
           </thead>
           <tbody>
             <tr><td><span class="regime-dot" style="background:#ff6b6b"></span>Night</td><td>5&nbsp;h</td><td>9.6 kWh</td><td>9.6 kWh</td><td style="color:#2ed573">exact</td></tr>
-            <tr><td><span class="regime-dot" style="background:#ffa502"></span>Cozy</td><td>9&nbsp;h</td><td>10.4 kWh</td><td>10.4 kWh</td><td style="color:#2ed573">exact</td></tr>
-            <tr><td><span class="regime-dot" style="background:#00d2ff"></span>Current</td><td>20&nbsp;h</td><td>12.6 kWh</td><td>19.3 kWh</td><td style="color:#ff6b6b">+53%</td></tr>
+            <tr><td><span class="regime-dot" style="background:#ffa502"></span>Cozy</td><td>8&nbsp;h</td><td>10.2 kWh</td><td>~10&ndash;12 kWh</td><td style="color:#ffd32a">approx</td></tr>
+            <tr><td><span class="regime-dot" style="background:#00d2ff"></span>Current</td><td>20&nbsp;h</td><td>12.6 kWh</td><td>~19.3 kWh (winter)</td><td style="color:#ff6b6b">underpredicts</td></tr>
           </tbody>
         </table>
       </div>
       <div class="insight-box" style="margin-top:12px">
-        <strong>Why does the model break for Current?</strong> With 20&nbsp;h enabled, the tank never cools &mdash; it stays near the thermostat setpoint all day. Hotter water means faster heat loss: the true average standby jumps from 200W to ~535W. The model is validated for short-window regimes (&le;9&nbsp;h) where cooling between windows keeps the average tank temperature lower.
+        <strong>Why does the model break for Current?</strong> With 20&nbsp;h enabled, the tank spends much more time near thermostat setpoint. That raises effective standby loss versus short-window regimes, so this linear model should be treated as directional, not exact.
       </div>
     </div>
   </div>
@@ -265,17 +265,17 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
   </div>
   <div class="cost-summary">
     <div class="cost-item">
-      <div class="amount" style="color:#00d2ff">&pound;884</div>
-      <div class="pct">68% of total</div>
+      <div class="amount" style="color:#00d2ff" id="costHeaterAnnual">--</div>
+      <div class="pct" id="costHeaterPct">--</div>
       <div class="cost-label">Heater (annual)</div>
     </div>
     <div class="cost-item">
-      <div class="amount" style="color:#7f8fa6">&pound;419</div>
-      <div class="pct">32% of total</div>
+      <div class="amount" style="color:#7f8fa6" id="costHouseAnnual">--</div>
+      <div class="pct" id="costHousePct">--</div>
       <div class="cost-label">Household (annual)</div>
     </div>
     <div class="cost-item">
-      <div class="amount">&pound;1,303</div>
+      <div class="amount" id="costTotalAnnual">--</div>
       <div class="pct">&nbsp;</div>
       <div class="cost-label">Total (annual)</div>
     </div>
@@ -285,7 +285,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
 <!-- ===== 6. THE OPTIMAL TIMER ===== -->
 <section>
   <h2>The Optimal Timer</h2>
-  <p class="section-lead">The heater costs &pound;835/year &mdash; most of it standby waste. Can we do better than just reverting to Cozy?</p>
+  <p class="section-lead">The heater costs <span id="currentHeaterAnnual">&pound;--</span>/year in this model &mdash; much of it standby waste. Can we do better than just reverting to Cozy?</p>
   <div class="card">
     <h3>How to Find the Best Schedule</h3>
     <p class="desc">The optimisation has two levers. Pulling both at once gives the biggest saving.</p>
@@ -298,7 +298,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
       <div class="step">
         <div class="step-num">2</div>
         <h4>Choose the cheapest hours</h4>
-        <p>Agile tariff rates vary 2&times; across the day. Shifting the window to the cheapest slots cuts £/kWh from ~17p to ~15p &mdash; a 12% rate saving on top.</p>
+        <p>Agile tariff rates vary strongly across the day. Shifting the window to cheap slots cuts £/kWh from ~<span id="rateCurrent">--</span> to ~<span id="rateBest">--</span> &mdash; about <span id="rateCutPct">--</span> rate saving on top.</p>
       </div>
     </div>
     <div class="card" style="margin:16px 0 0;background:#0d1321">
@@ -332,7 +332,7 @@ section .section-lead{color:#7f8fa6;font-size:0.92em;margin-bottom:24px;max-widt
     </div>
   </div>
   <div class="conclusion">
-    <strong>Recommendation:</strong> The <strong>Optimal</strong> 2-window schedule (13&ndash;16, 22&ndash;00) saves roughly <strong id="optSavingOpt">&pound;214</strong>/year vs the current timer &mdash; found via exhaustive search over all 1/2/3-window schedules at 30-min resolution, penalising heat loss between heating and evening usage. It keeps hot water available for midnight showers while targeting the cheapest Agile slots outside peak hours. Even reverting to <strong>Cozy</strong> saves <strong id="optSavingCozy">&pound;139</strong>/year. Any short schedule is dramatically better than 20&nbsp;h/day.
+    <strong>Recommendation:</strong> The <strong>Optimal</strong> 2-window schedule (13&ndash;16, 22&ndash;00) saves roughly <strong id="optSavingOpt">&pound;--</strong>/year vs the current timer in this model-based comparison. It keeps hot water available for midnight showers while targeting cheaper Agile slots outside peak hours. Even reverting to <strong>Cozy</strong> saves <strong id="optSavingCozy">&pound;--</strong>/year. Any short schedule is dramatically better than 20&nbsp;h/day.
   </div>
 </section>
 
@@ -395,6 +395,69 @@ const FONT = '#a4b0be';
 Chart.defaults.color = FONT;
 Chart.defaults.borderColor = GRID;
 Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+function avgDaily(start, end) {
+  const rows = D.daily.filter(r => r.date >= start && r.date <= end);
+  if (!rows.length) return null;
+  const heater = rows.reduce((a, r) => a + r.heater, 0) / rows.length;
+  const other = rows.reduce((a, r) => a + r.other, 0) / rows.length;
+  const total = heater + other;
+  return { heater, other, total, onHours: heater / 3.11, n: rows.length };
+}
+
+function gbp(v) {
+  return '£' + Math.round(v).toLocaleString('en-GB');
+}
+
+function one(v) {
+  return (Math.round(v * 10) / 10).toFixed(1);
+}
+
+// ===== Headline + regime summary =====
+const cozyStats = avgDaily('2025-05-01', '2025-06-30');
+const summerStats = avgDaily('2025-07-01', '2025-08-25');
+const winterStats = avgDaily('2025-12-01', '2026-02-16');
+
+if (cozyStats && winterStats) {
+  const gapTotal = winterStats.total - cozyStats.total;
+  const gapHeater = winterStats.heater - cozyStats.heater;
+  const heaterShare = gapTotal > 0 ? Math.round((gapHeater / gapTotal) * 100) : 0;
+  document.getElementById('heroHeaterShare').textContent = heaterShare + '%';
+  document.getElementById('heroOnHours').textContent = one(winterStats.onHours) + ' h';
+  document.getElementById('heroHeater').textContent =
+    one(winterStats.heater) + ' (vs ' + one(cozyStats.heater) + ')';
+  document.getElementById('tblCozyHeater').textContent = one(cozyStats.heater);
+  document.getElementById('tblCozyOn').textContent = one(cozyStats.onHours);
+  document.getElementById('tblCozyOther').textContent = one(cozyStats.other);
+  document.getElementById('tblCozyTotal').textContent = one(cozyStats.total);
+  document.getElementById('tblWinterHeater').textContent = one(winterStats.heater);
+  document.getElementById('tblWinterOn').textContent = one(winterStats.onHours);
+  document.getElementById('tblWinterOther').textContent = one(winterStats.other);
+  document.getElementById('tblWinterTotal').textContent = one(winterStats.total);
+}
+if (summerStats) {
+  document.getElementById('tblSummerHeater').textContent = one(summerStats.heater);
+  document.getElementById('tblSummerOn').textContent = one(summerStats.onHours);
+  document.getElementById('tblSummerOther').textContent = one(summerStats.other);
+  document.getElementById('tblSummerTotal').textContent = one(summerStats.total);
+}
+
+// ===== Annualized cost cards =====
+const heaterPeriod = D.cost.monthly.reduce((a, m) => a + m.heater_gbp, 0);
+const housePeriod = D.cost.monthly.reduce((a, m) => a + m.household_gbp, 0);
+const analyzedDays = D.daily.length || 365;
+const annualScale = 365 / analyzedDays;
+const heaterAnnual = heaterPeriod * annualScale;
+const houseAnnual = housePeriod * annualScale;
+const totalAnnual = heaterAnnual + houseAnnual;
+const heaterPct = totalAnnual > 0 ? (heaterAnnual / totalAnnual * 100) : 0;
+const housePct = totalAnnual > 0 ? (houseAnnual / totalAnnual * 100) : 0;
+
+document.getElementById('costHeaterAnnual').textContent = gbp(heaterAnnual);
+document.getElementById('costHouseAnnual').textContent = gbp(houseAnnual);
+document.getElementById('costTotalAnnual').textContent = gbp(totalAnnual);
+document.getElementById('costHeaterPct').textContent = heaterPct.toFixed(0) + '% of total';
+document.getElementById('costHousePct').textContent = housePct.toFixed(0) + '% of total';
 
 // ===== DAILY TIMELINE with regime background bands =====
 const dates = D.daily.map(d => d.date);
@@ -805,11 +868,25 @@ optSchedules.forEach(sched => {
   tbody.appendChild(tr);
 });
 
-// Update dynamic conclusion values
-const savingOpt = optSchedules[2]?.saving || 228;
-const savingCozy = optSchedules[1]?.saving || 169;
-document.getElementById('optSavingOpt').textContent = '\u00a3' + savingOpt;
-document.getElementById('optSavingCozy').textContent = '\u00a3' + savingCozy;
+// Update dynamic conclusion and headline values
+const currentSched = optSchedules.find(s => s.name === 'Current') || optSchedules[0];
+const cozySched = optSchedules.find(s => s.name === 'Cozy') || optSchedules[1] || optSchedules[0];
+const bestSched = optSchedules.reduce((best, s) => (s.annual_cost < best.annual_cost ? s : best), optSchedules[0]);
+const savingOpt = bestSched?.saving ?? 0;
+const savingCozy = cozySched?.saving ?? 0;
+document.getElementById('optSavingOpt').textContent = '\u00a3' + Math.round(savingOpt);
+document.getElementById('optSavingCozy').textContent = '\u00a3' + Math.round(savingCozy);
+document.getElementById('heroSaving').textContent = gbp(savingOpt);
+document.getElementById('currentHeaterAnnual').textContent = gbp(currentSched?.annual_cost || 0);
+
+if (currentSched && bestSched) {
+  const rateCut = currentSched.avg_rate > 0
+    ? ((currentSched.avg_rate - bestSched.avg_rate) / currentSched.avg_rate * 100)
+    : 0;
+  document.getElementById('rateCurrent').textContent = currentSched.avg_rate.toFixed(2) + 'p';
+  document.getElementById('rateBest').textContent = bestSched.avg_rate.toFixed(2) + 'p';
+  document.getElementById('rateCutPct').textContent = rateCut.toFixed(0) + '%';
+}
 
 }).catch(() => {
   document.querySelector('.container').insertAdjacentHTML('afterbegin',
